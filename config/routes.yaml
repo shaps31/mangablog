@@ -1,5 +1,11 @@
+# config/routes.yaml
+
+# Charge toutes les routes par attributs dans src/Controller
 controllers:
-    resource:
-        path: ../src/Controller/
-        namespace: App\Controller
+    resource: ../src/Controller/
     type: attribute
+
+# Route d’accueil utilisée par {{ path('app_home') }} dans base.html.twig
+app_home:
+    path: /
+    controller: App\Controller\BlogController::index
