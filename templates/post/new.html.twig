@@ -9,3 +9,24 @@
 
     <a href="{{ path('app_post_index') }}">back to list</a>
 {% endblock %}
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const title = document.getElementById('post_title');
+            const slug  = document.getElementById('post_slug');
+            if (!title || !slug) return;
+
+            let userEditedSlug = false;
+            slug.addEventListener('input', function () { userEditedSlug = true; });
+
+            title.addEventListener('input', function () {
+                if (userEditedSlug && slug.value.trim() !== '') return;
+                // transforme "Mon Titre !" -> "mon-titre"
+                slug.value = title.value
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')   // tout ce qui n’est pas lettre/chiffre devient "-"
+                    .replace(/^-+|-+$/g, '');      // enlève les "-" au début/fin
+            });
+        });
+    </script>
+{% endblock %}
