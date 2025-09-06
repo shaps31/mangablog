@@ -30,7 +30,8 @@ final class PostController extends AbstractController
         $form = $this->createForm(PostType::class, $post); // on construit le formulaire
         $form->handleRequest($request);                    // on lie la requête
 
-        if ($form->isSubmitted() && $form->isValid()) {    // on ne sauvegarde que si valide
+        if ($form->isSubmitted() && $form->isValid()) {
+            $post->setAuthor($this->getUser());
             $em->persist($post);
             $em->flush();
             $this->addFlash('success', 'Article créé.');

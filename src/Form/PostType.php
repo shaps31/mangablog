@@ -19,6 +19,7 @@ class PostType extends AbstractType
     {
         $builder
             ->add('title')
+            ->add('slug')
             ->add('content')
             ->add('status', ChoiceType::class, [
                 'choices' => [
