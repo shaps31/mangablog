@@ -36,3 +36,12 @@ Commits:
 - amelioration(post): …
 - amelioration(validation): …
 - tache(securite): …
+
+## 2025-09-06 — Sprint 3
+- Contrôleur public Blog (index + show)
+- Recherche texte et filtre par catégorie (published only)
+- Vues Bootstrap simples
+- Lien "Blog" dans la navbar
+
+Commits:
+- ajout(blog): liste publique avec recherche et filtre catégorie + page article
