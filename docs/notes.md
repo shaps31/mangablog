@@ -77,3 +77,8 @@ Commit: ui(nav): menu Back-office (liens CRUD) visible pour l’utilisateur conn
 ## 2025-09-06 — Sprint 5 (petit plus)
 - Ajout d'un indicateur "Page X / Y" sur /blog (Twig uniquement)
 Commit: ui(blog): afficher 'Page X / Y' au-dessus de la pagination
+
+## 2025-09-06 — Sprint 7 (plus)
+- Prévisualisation de la cover pendant la saisie (JS simple). 
+- Objectif : améliorer l’UX sans complexifier (pas d’upload, juste URL).
+Commit: ui(post): aperçu visuel de la cover pendant la saisie (prévisualisation de l’URL)
