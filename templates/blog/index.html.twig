@@ -53,6 +53,11 @@
                 <button class="btn btn-primary">Filtrer</button>
             </div>
         </form>
+
+        {# ✅ Compteur juste sous le formulaire #}
+        <p class="text-muted small mb-2">
+            {{ posts|length }} article(s) affiché(s) — page {{ page }}/{{ pages }}
+        </p>
     </div>
 
     {# Bandeau de stats du mois #}
@@ -66,14 +71,14 @@
         <div class="d-flex gap-2 flex-wrap">
             {% for row in totalsByCat %}
                 <span class="badge text-bg-dark">
-          {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
-        </span>
+                    {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
+                </span>
             {% endfor %}
 
             {% if tag|default(0) %}
                 <span class="badge text-bg-secondary ms-2">
-          tag : {{ (allTags|filter(t => t.id == tag)|first).name }}
-        </span>
+                    tag : {{ (allTags|filter(t => t.id == tag)|first).name }}
+                </span>
             {% endif %}
         </div>
     </div>
@@ -82,15 +87,24 @@
     <div class="row row-cols-1 g-3">
         {% for post in posts %}
             <div class="col">
-                <div class="card shadow-sm">
+                <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h2 class="h5 card-title mb-1">
                             <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
                         </h2>
 
-                        {# ✅ Cover avec fallback local #}
+                        {# 1) ⏱ Estimation simple: ~200 mots/minute #}
+                        {% set words = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
+                        {% set minutes = (words / 200)|round(0, 'ceil') %}
+                        <span class="text-muted small d-inline-block mb-2">⏱ {{ minutes }} min de lecture</span>
+
+                        {# ✅ Cover avec fallback, alt descriptif, lazy #}
                         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                        <img src="{{ coverUrl }}" class="img-thumbnail me-3" style="max-height:120px" alt="Cover">
+                        <img src="{{ coverUrl }}"
+                             class="img-thumbnail me-3"
+                             style="max-height:120px"
+                             alt="Couverture : {{ post.title }}"
+                             loading="lazy">
 
                         <div class="text-muted small mb-2">
                             {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }} • {{ post.category.name }}
@@ -101,9 +115,8 @@
                             <div class="mt-1">
                                 {% set activeTagId = tag|default(null) %}
                                 {% for t in post.tags %}
-                                    <a
-                                        class="badge text-decoration-none me-1 {{ t.id == activeTagId ? 'bg-primary' : 'bg-secondary' }}"
-                                        href="{{ path('blog_index', app.request.query.all|merge({'tag': t.id, 'page': 1})) }}">
+                                    <a class="badge text-decoration-none me-1 {{ t.id == activeTagId ? 'bg-primary' : 'bg-secondary' }}"
+                                       href="{{ path('blog_index', app.request.query.all|merge({'tag': t.id, 'page': 1})) }}">
                                         {{ t.name }}
                                     </a>
                                 {% endfor %}
@@ -117,8 +130,10 @@
                             </a>
                         {% endif %}
 
-                        {# Si twig/string-extra absent : utiliser slice/length #}
-                        <p class="card-text mb-2">{{ post.content|u.truncate(180, '…') }}</p>
+                        {# 2) Extrait propre (HTML nettoyé) #}
+                        <p class="mb-2">
+                            {{ post.content|striptags|u.truncate(220, '…') }}
+                        </p>
 
                         <a class="btn btn-sm btn-outline-primary"
                            href="{{ path('blog_show', { slug: post.slug }) }}">Lire</a>
@@ -128,36 +143,42 @@
         {% endfor %}
     </div>
 
-    {# Pagination (préserve tous les filtres via app.request.query.all) #}
-    {% if pages|default(1) > 1 %}
-        <nav class="mt-3">
+    {# ✅ Pagination (accessible) sous la liste #}
+    {% if pages > 1 %}
+        <nav aria-label="Pagination" class="mt-3">
             <ul class="pagination">
+
+                {# Précédent #}
                 {% if page > 1 %}
                     <li class="page-item">
-                        <a class="page-link"
+                        <a class="page-link" rel="prev"
                            href="{{ path('blog_index', app.request.query.all|merge({'page': page-1})) }}">
                             Précédent
                         </a>
                     </li>
                 {% endif %}
 
+                {# Pages #}
                 {% for p in 1..pages %}
                     <li class="page-item {{ p == page ? 'active' }}">
                         <a class="page-link"
+                           {% if p == page %}aria-current="page"{% endif %}
                            href="{{ path('blog_index', app.request.query.all|merge({'page': p})) }}">
                             {{ p }}
                         </a>
                     </li>
                 {% endfor %}
 
+                {# Suivant #}
                 {% if page < pages %}
                     <li class="page-item">
-                        <a class="page-link"
+                        <a class="page-link" rel="next"
                            href="{{ path('blog_index', app.request.query.all|merge({'page': page+1})) }}">
                             Suivant
                         </a>
                     </li>
                 {% endif %}
+
             </ul>
         </nav>
     {% endif %}
