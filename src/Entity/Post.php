@@ -20,6 +20,7 @@ class Post
 
     #[Assert\NotBlank]
     #[Assert\Length(min: 3, max: 150)]
+    #[ORM\Column(length: 150)]
     private ?string $title = null;
 
     #[ORM\Column(length: 160)]
@@ -27,9 +28,11 @@ class Post
 
     #[Assert\NotBlank]
     #[Assert\Length(min: 10)]
+    #[ORM\Column(type: Types::TEXT)]
     private ?string $content = null;
 
     #[Assert\Choice(['draft','published'])]
+    #[ORM\Column(length: 10)]
     private ?string $status = null;
 
     #[ORM\Column(nullable: true)]
@@ -39,6 +42,7 @@ class Post
     private ?string $cover = null;
 
     #[Assert\Range(min: 0, max: 10)]
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $rating = null;
 
     #[ORM\ManyToOne(inversedBy: 'posts')]
@@ -50,9 +54,9 @@ class Post
     private ?Category $category = null;
 
     /**
-     * @var Collection<int, tag>
+     * @var Collection<int, Tag>
      */
-    #[ORM\ManyToMany(targetEntity: tag::class, inversedBy: 'posts')]
+    #[ORM\ManyToMany(targetEntity: Tag::class, inversedBy: 'posts')]
     private Collection $tags;
 
     /**
@@ -64,9 +68,9 @@ class Post
     public function __construct()
     {
         $this->status = 'draft';
-        $this->tags = new \Doctrine\Common\Collections\ArrayCollection();
+        $this->tags = new ArrayCollection();
+        $this->comments = new ArrayCollection(); // important
     }
-
 
     public function getId(): ?int
     {
@@ -182,14 +186,14 @@ class Post
     }
 
     /**
-     * @return Collection<int, tag>
+     * @return Collection<int, Tag>
      */
     public function getTags(): Collection
     {
         return $this->tags;
     }
 
-    public function addTag(tag $tag): static
+    public function addTag(Tag $tag): static
     {
         if (!$this->tags->contains($tag)) {
             $this->tags->add($tag);
@@ -198,7 +202,7 @@ class Post
         return $this;
     }
 
-    public function removeTag(tag $tag): static
+    public function removeTag(Tag $tag): static
     {
         $this->tags->removeElement($tag);
 
