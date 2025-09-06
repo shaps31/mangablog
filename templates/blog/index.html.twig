@@ -10,12 +10,14 @@
             {# Select pour filtrer par catégorie #}
             <select class="form-select" name="category">
                 <option value="0">Toutes catégories</option>
+                {% set currentCat = category|default(0) %}
                 {% for c in categories %}
-                    <option value="{{ c.id }}" {{ category == c.id ? 'selected' }}>
+                    <option value="{{ c.id }}" {{ currentCat == c.id ? 'selected' : '' }}>
                         {{ c.name }}
                     </option>
                 {% endfor %}
             </select>
+
 
             {# ---- NOUVEAU : filtre par tag ---- #}
             <select class="form-select" name="tag">

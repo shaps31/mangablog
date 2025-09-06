@@ -21,6 +21,7 @@ final class BlogController extends AbstractController
         PostRepository $posts,
         CategoryRepository $categories,
         TagRepository $tagRepository
+
     ): Response
     {
         // 🔍 Récupération des filtres depuis l’URL (GET)
@@ -32,13 +33,8 @@ final class BlogController extends AbstractController
         // 📄 Recherche paginée des articles publiés avec filtres (q, catégorie, tag)
         // ⚠️ Nécessite que ton PostRepository accepte $tagId.
         // Signature attendue côté repo: searchPublishedPaginated(?string $q, ?int $categoryId, ?int $tagId, int $page, int $perPage = 5)
-        $pager = $posts->searchPublishedPaginated(
-            q: $q,
-            categoryId: $catId ?: null,
-            tagId: $tagId ?: null,
-            page: $page,
-            perPage: 5
-        );
+        $pager = $posts->searchPublishedPaginated($q, $catId ?: null, $tagId ?: null, $page, 5);
+
         $items = $pager['items']; // les articles de la page courante
 
         // 📂 Données pour les filtres (liste complète)
@@ -55,7 +51,7 @@ final class BlogController extends AbstractController
         return $this->render('blog/index.html.twig', [
             'posts'       => $items,          // articles de la page
             'q'           => $q,              // valeur du champ recherche
-            'catId'       => $catId,          // filtre catégorie sélectionné
+            'category'       => $catId,          // filtre catégorie sélectionné
             'tag'         => $tagId,          // filtre tag sélectionné
             'categories'  => $allCategories,  // toutes les catégories
             'allTags'     => $allTags,        // tous les tags (triés par nom)
