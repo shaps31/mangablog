@@ -3,7 +3,7 @@
 
 {% block body %}
     <div class="bg-white p-3 border rounded mb-3">
-        <form method="get" class="row g-2 align-items-center">
+        <form method="get" action="{{ path('blog_index') }}" class="row g-2 align-items-center">
             <div class="col-md-6">
                 <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher un article...">
             </div>
@@ -21,11 +21,8 @@
         </form>
     </div>
 
-    {% if posts is empty %}
-        <div class="alert alert-info">Aucun article publié trouvé.</div>
-    {% endif %}
-    <div class="alert alert-secondary d-flex align-items-center justify-content-between">
-        <div>Ce mois-ci : <strong>{{ totalMonth }}</strong> article{{ totalMonth > 1 ? 's' : '' }} publié{{ totalMonth > 1 ? 's' : '' }}.</div>
+    <div class="alert alert-secondary d-flex justify-content-between">
+        <div>Ce mois-ci : <strong>{{ totalMonth }}</strong> article{{ totalMonth>1?'s':'' }} publié{{ totalMonth>1?'s':'' }}.</div>
         <div class="d-flex gap-2 flex-wrap">
             {% for row in totalsByCat %}
                 <span class="badge text-bg-dark">{{ row.category ?? 'Sans catégorie' }} : {{ row.total }}</span>
@@ -33,23 +30,22 @@
         </div>
     </div>
 
-
     <div class="row row-cols-1 g-3">
         {% for post in posts %}
             <div class="col">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h2 class="h5 card-title mb-1">
-                            <a href="{{ path('blog_show', {slug: post.slug}) }}">{{ post.title }}</a>
+                            <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
                         </h2>
                         <div class="text-muted small mb-2">
-                            {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}
-                            • {{ post.category.name }}
+                            {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }} • {{ post.category.name }}
                         </div>
-                        <p class="card-text mb-2">
-                            {{ post.content|u.truncate(180, '…') }}
-                        </p>
-                        <a class="btn btn-sm btn-outline-primary" href="{{ path('blog_show', {slug: post.slug}) }}">Lire</a>
+                        <p class="card-text mb-2">{{ post.content|u.truncate(180, '…') }}</p>
+
+                        {# >>> le lien “Lire” correct <<< #}
+                        <a class="btn btn-sm btn-outline-primary"
+                           href="{{ path('blog_show', { slug: post.slug }) }}">Lire</a>
                     </div>
                 </div>
             </div>
