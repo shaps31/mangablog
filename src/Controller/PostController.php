@@ -31,7 +31,21 @@ final class PostController extends AbstractController
         $form->handleRequest($request);                    // on lie la requête
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // 1) auteur = utilisateur connecté
             $post->setAuthor($this->getUser());
+
+            // 2) slug auto si vide (tu peux aussi le saisir à la main dans le form)
+            if (!$post->getSlug()) {
+                $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle()), '-'));
+                $post->setSlug($slug);
+            }
+
+            // 3) si publié sans date -> maintenant
+            if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
+                $post->setPublishedAt(new \DateTimeImmutable());
+            }
+            dd($post->getTitle(), $post->getSlug(), $post->getStatus(), $post->getCategory());
+
             $em->persist($post);
             $em->flush();
             $this->addFlash('success', 'Article créé.');

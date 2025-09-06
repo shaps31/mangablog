@@ -1,11 +1,9 @@
-{{ form_start(form) }}
-  {{ form_row(form.title) }}
-  {{ form_row(form.content) }}
-  {{ form_row(form.status) }}
-  {{ form_row(form.publishedAt) }}
-  {{ form_row(form.cover) }}
-  {{ form_row(form.rating) }}
-  {{ form_row(form.category) }}
-  {{ form_row(form.tags) }}
-<button class="btn btn-primary">Enregistrer</button>
-{{ form_end(form) }}
+
+{% block title %}Créer un article{% endblock %}
+{% block body %}
+    <h1 class="h3 mb-3">Créer un article</h1>
+    {{ form_start(form) }}
+    {{ form_widget(form) }}
+    <button class="btn btn-primary">Enregistrer</button>
+    {{ form_end(form) }}
+{% endblock %}
