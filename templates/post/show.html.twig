@@ -1,50 +1,76 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Post{% endblock %}
+{% block title %}{{ post.title }}{% endblock %}
 
 {% block body %}
-    <h1>Post</h1>
+    <div class="container py-3">
 
-    <table class="table">
-        <tbody>
+        <h1 class="mb-2">{{ post.title }}</h1>
+
+        {# Tags (badges) #}
+        {% if post.tags|length > 0 %}
+            <div class="mb-3">
+                {% for t in post.tags %}
+                    <span class="badge text-bg-secondary me-1">{{ t.name }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Cover preview #}
+        {% if post.cover %}
+            <div class="mb-3">
+                <img src="{{ asset(post.cover) }}" alt="{{ post.title }}" style="max-width:420px;height:auto;">
+            </div>
+        {% endif %}
+
+        <table class="table">
+            <tbody>
             <tr>
                 <th>Id</th>
                 <td>{{ post.id }}</td>
-            </tr>
-            <tr>
-                <th>Title</th>
-                <td>{{ post.title }}</td>
             </tr>
             <tr>
                 <th>Slug</th>
                 <td>{{ post.slug }}</td>
             </tr>
             <tr>
-                <th>Content</th>
-                <td>{{ post.content }}</td>
-            </tr>
-            <tr>
                 <th>Status</th>
-                <td>{{ post.status }}</td>
+                <td>
+                    {% if post.status == 'published' %}
+                        <span class="badge text-bg-success">Published</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">Draft</span>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
                 <th>PublishedAt</th>
-                <td>{{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-            <tr>
-                <th>Cover</th>
-                <td>{{ post.cover }}</td>
+                <td>{{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}</td>
             </tr>
             <tr>
                 <th>Rating</th>
-                <td>{{ post.rating }}</td>
+                <td>{{ post.rating is not null ? post.rating ~ '/5' : '—' }}</td>
             </tr>
-        </tbody>
-    </table>
+            <tr>
+                <th>Author</th>
+                <td>{{ post.author ? post.author.userIdentifier : '—' }}</td>
+            </tr>
+            <tr>
+                <th>Category</th>
+                <td>{{ post.category ? post.category.name : '—' }}</td>
+            </tr>
+            <tr>
+                <th>Content</th>
+                <td><pre class="mb-0">{{ post.content }}</pre></td>
+            </tr>
+            </tbody>
+        </table>
 
-    <a href="{{ path('app_post_index') }}">back to list</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-secondary" href="{{ path('app_post_index') }}">Back</a>
+            <a class="btn btn-primary" href="{{ path('app_post_edit', {'id': post.id}) }}">Edit</a>
+            {{ include('post/_delete_form.html.twig') }}
+        </div>
 
-    <a href="{{ path('app_post_edit', {'id': post.id}) }}">edit</a>
-
-    {{ include('post/_delete_form.html.twig') }}
+    </div>
 {% endblock %}

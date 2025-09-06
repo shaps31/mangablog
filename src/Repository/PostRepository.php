@@ -116,54 +116,50 @@ class PostRepository extends ServiceEntityRepository
         int $page,
         int $perPage = 5
     ): array {
-        // 1) Construire la requête de base (tous les articles publiés, sans pagination)
         $baseQb = $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c') // jointure catégorie
-            ->leftJoin('p.tags', 't')->addSelect('t')     // jointure tags
-            ->andWhere('p.status = :pub')                 // uniquement "published"
-            ->setParameter('pub', 'published');
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->leftJoin('p.tags', 't')->addSelect('t')
+            ->andWhere('p.status = :pub')->setParameter('pub', 'published');
 
-        // Filtre par mot-clé (titre ou contenu)
         if ($q) {
             $baseQb->andWhere('p.title LIKE :q OR p.content LIKE :q')
                 ->setParameter('q', '%'.$q.'%');
         }
-
-        // Filtre par catégorie
         if ($categoryId) {
-            $baseQb->andWhere('c.id = :cid')
-                ->setParameter('cid', $categoryId);
+            $baseQb->andWhere('c.id = :cid')->setParameter('cid', $categoryId);
         }
-
-        // Filtre par tag
         if ($tagId) {
-            $baseQb->andWhere('t.id = :tid')
-                ->setParameter('tid', $tagId);
+            $baseQb->andWhere('t.id = :tid')->setParameter('tid', $tagId);
         }
 
-        // 2) Requête de comptage (total d’articles correspondant aux filtres)
+        // ---- total
         $countQb = clone $baseQb;
-        $total = (int) $countQb->select('COUNT(DISTINCT p.id)') // DISTINCT car jointures peuvent dupliquer
-        ->resetDQLPart('orderBy') // on enlève le tri, inutile pour COUNT
-        ->getQuery()
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')
+            ->resetDQLPart('orderBy')
+            ->getQuery()
             ->getSingleScalarResult();
 
-        // 3) Requête finale pour récupérer uniquement la page demandée
+        // ---- pagination
+        $perPage = max(1, $perPage);
+        $pages   = max(1, (int) ceil($total / $perPage));
+        $page    = max(1, min($page, $pages));
+
         $items = (clone $baseQb)
-            ->orderBy('p.publishedAt', 'DESC')            // tri : les plus récents en premier
-            ->setFirstResult(max(0, $page - 1) * $perPage) // OFFSET : où commencer
-            ->setMaxResults($perPage)                      // LIMIT : combien d’articles max
+            ->orderBy('p.publishedAt', 'DESC')
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage)
             ->getQuery()
             ->getResult();
 
-        // 4) On retourne les infos utiles au contrôleur/vue
         return [
-            'items'   => $items,   // les articles de cette page
-            'total'   => $total,   // nombre total de résultats trouvés
-            'page'    => $page,    // la page actuelle
-            'perPage' => $perPage, // combien d’articles par page
+            'items'   => $items,
+            'total'   => $total,
+            'page'    => $page,
+            'perPage' => $perPage,
+            'pages'   => $pages,      // <<--- clé attendue par le contrôleur
         ];
     }
+
 
 
     /**
