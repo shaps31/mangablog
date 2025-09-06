@@ -59,9 +59,10 @@ class Post
 
     public function __construct()
     {
-        $this->tags = new ArrayCollection();
-        $this->comments = new ArrayCollection();
+        $this->status = 'draft';
+        $this->tags = new \Doctrine\Common\Collections\ArrayCollection();
     }
+
 
     public function getId(): ?int
     {

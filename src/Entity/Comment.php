@@ -31,6 +31,13 @@ class Comment
     #[ORM\Column(length: 10)]
     private ?string $status = null;
 
+    public function __construct()
+    {
+        $this->createdAt = new \DateTimeImmutable();
+        $this->status = 'pending';
+    }
+
+
     public function getId(): ?int
     {
         return $this->id;
