@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ post.title }} · Blog{% endblock %}
+
+{% block body %}
+    <article class="bg-white p-4 border rounded">
+        <h1 class="h3 mb-2">{{ post.title }}</h1>
+        <div class="text-muted small mb-3">
+            Publié {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : 'brouillon' }}
+            • Catégorie : {{ post.category.name }}
+        </div>
+        <div class="mb-4" style="white-space: pre-line;">
+            {{ post.content }}
+        </div>
+        <a href="{{ path('blog_index') }}" class="btn btn-outline-secondary btn-sm">← Retour au blog</a>
+    </article>
+{% endblock %}

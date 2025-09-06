@@ -16,28 +16,22 @@ class PostRepository extends ServiceEntityRepository
         parent::__construct($registry, Post::class);
     }
 
-    //    /**
-    //     * @return Post[] Returns an array of Post objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    public function searchPublished(?string $q = null, ?int $categoryId = null): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->where('p.status = :status')->setParameter('status', 'published')
+            ->orderBy('p.publishedAt', 'DESC');
 
-    //    public function findOneBySomeField($value): ?Post
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        if ($q) {
+            $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
+                ->setParameter('q', '%'.$q.'%');
+        }
+        if ($categoryId) {
+            $qb->andWhere('c.id = :cat')->setParameter('cat', $categoryId);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
 }

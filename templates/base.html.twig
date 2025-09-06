@@ -15,6 +15,7 @@
         <a class="navbar-brand fw-bold" href="{{ path('app_home') }}">MangaBlog</a>
 
         <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-outline-light btn-sm" href="{{ path('blog_index') }}">Blog</a>
             {% if app.user %}
                 <span class="navbar-text small me-2">Connecté en tant que {{ app.user.userIdentifier }}</span>
                 <a class="btn btn-outline-light btn-sm" href="{{ path('app_logout') }}">Se déconnecter</a>
@@ -25,6 +26,7 @@
         </div>
     </div>
 </nav>
+
 
 
 <main class="container py-4">
