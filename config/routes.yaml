@@ -1,11 +1,10 @@
-# config/routes.yaml
-
-# Charge toutes les routes par attributs dans src/Controller
+# Load all controllers that use #[Route(...)] attributes
 controllers:
     resource: ../src/Controller/
     type: attribute
 
-# Route d’accueil utilisée par {{ path('app_home') }} dans base.html.twig
-app_home:
+# Optional: make "/" redirect to the home page
+app_root_redirect:
     path: /
-    controller: App\Controller\BlogController::index
+    controller: Symfony\Bundle\FrameworkBundle\Controller\RedirectController
+    defaults: { route: 'app_home', permanent: false }
