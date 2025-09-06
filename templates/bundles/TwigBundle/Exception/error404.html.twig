@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+{% block title %}Page introuvable — MangaBlog{% endblock %}
+
+{% block body %}
+    <div class="text-center py-5">
+        <h1 class="display-6 mb-3">🧐 Oups… page introuvable (404)</h1>
+        <p class="text-muted mb-4">
+            Le contenu demandé n’existe pas ou a été déplacé.
+        </p>
+
+        <div class="d-flex gap-2 justify-content-center">
+            <a class="btn btn-primary" href="{{ path('blog_index') }}">← Retour au blog</a>
+            <a class="btn btn-outline-secondary" href="/">Aller à l’accueil</a>
+        </div>
+    </div>
+{% endblock %}
