@@ -73,3 +73,7 @@ Commit:
 - Ajout d'un menu Back-office dans la navbar (CRUD Articles/Catégories/Tags/Commentaires)
 - Visible uniquement si l'utilisateur est connecté
 Commit: ui(nav): menu Back-office (liens CRUD) visible pour l’utilisateur connecté
+
+## 2025-09-06 — Sprint 5 (petit plus)
+- Ajout d'un indicateur "Page X / Y" sur /blog (Twig uniquement)
+Commit: ui(blog): afficher 'Page X / Y' au-dessus de la pagination
