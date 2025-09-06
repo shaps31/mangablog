@@ -60,3 +60,11 @@ Commit:
 
 Commit:
 - ajout(comments): formulaire public (auth requis) + affichage approuvés
+
+-“Commentaires publics : envoi → pending, modération via CRUD, affichage quand approved”.
+
+## 2025-09-06 — Sprint 5
+- Pagination /blog (Doctrine setFirstResult + setMaxResults)
+- Conserve recherche et catégorie dans les liens
+  Commit : feat(blog): pagination simple (page=X) avec conservation des filtres
+
