@@ -23,15 +23,19 @@ class Comment
     #[ORM\JoinColumn(nullable: false)]
     private ?User $author = null;
 
+    #[ORM\Column(type: Types::TEXT)]
     #[Assert\NotBlank]
-    #[Assert\Length(min: 2)]
     private ?string $content = null;
 
-    #[ORM\Column]
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
+    #[ORM\Column(length: 10)]
     #[Assert\Choice(['pending','approved'])]
     private ?string $status = null;
+
+
+
 
     public function __construct()
     {
