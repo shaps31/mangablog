@@ -25,6 +25,20 @@
             {% endif %}
         </div>
     </div>
+    {% if app.user %}
+        <div class="btn-group me-2">
+            <a class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+                Back-office
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ path('app_post_index') }}">Articles</a></li>
+                <li><a class="dropdown-item" href="{{ path('app_category_index') }}">Catégories</a></li>
+                <li><a class="dropdown-item" href="{{ path('app_tag_index') }}">Tags</a></li>
+                <li><a class="dropdown-item" href="{{ path('app_comment_index') }}">Commentaires</a></li>
+            </ul>
+        </div>
+    {% endif %}
+
 </nav>
 
 
