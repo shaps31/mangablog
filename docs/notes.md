@@ -52,3 +52,11 @@ Commits:
 
 Commit:
 - ajout(blog): totaux du mois (global + par catégorie) sur la liste publique
+
+## 2025-09-06 — Sprint 4
+- Commentaires publics : formulaire simple (contenu seul), sauvegarde en "pending"
+- Affichage des commentaires "approved" sous l'article
+- Modération via CRUD des commentaires
+
+Commit:
+- ajout(comments): formulaire public (auth requis) + affichage approuvés
