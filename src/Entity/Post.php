@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PostRepository::class)]
 class Post
@@ -16,16 +17,18 @@ class Post
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 150)]
+    #[Assert\Length(min: 3, max: 150)]
+    #[Assert\NotBlank]
     private ?string $title = null;
 
     #[ORM\Column(length: 160)]
     private ?string $slug = null;
 
-    #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank]
+    #[Assert\Length(min: 10)]
     private ?string $content = null;
 
-    #[ORM\Column(length: 10)]
+    #[Assert\Choice(['draft','published'])]
     private ?string $status = null;
 
     #[ORM\Column(nullable: true)]
@@ -34,7 +37,7 @@ class Post
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $cover = null;
 
-    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    #[Assert\Range(min: 0, max: 10)]
     private ?int $rating = null;
 
     #[ORM\ManyToOne(inversedBy: 'posts')]
