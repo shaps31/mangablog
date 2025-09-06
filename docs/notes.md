@@ -82,3 +82,7 @@ Commit: ui(blog): afficher 'Page X / Y' au-dessus de la pagination
 - Prévisualisation de la cover pendant la saisie (JS simple). 
 - Objectif : améliorer l’UX sans complexifier (pas d’upload, juste URL).
 Commit: ui(post): aperçu visuel de la cover pendant la saisie (prévisualisation de l’URL)
+-“Correction filtres category/tag (+ pagination) – Bug ‘variable inexistante’ corrigé.”
+- Ajout d'un compteur de résultats sur /blog + bouton Réinitialiser si des filtres sont actifs.
+- Objectif : meilleure UX, facile à expliquer (Twig uniquement).
+
