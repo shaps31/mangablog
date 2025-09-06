@@ -23,27 +23,18 @@ final class PostController extends AbstractController
         ]);
     }
 
-    public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    #[Route('/new', name: 'app_post_new', methods: ['GET', 'POST'])]
+    public function new(Request $request, EntityManagerInterface $em): Response
     {
-        $post = new Post();
-        $form = $this->createForm(PostType::class, $post);
-        $form->handleRequest($request);
+        $post = new Post();                                // on crée un nouvel objet
+        $form = $this->createForm(PostType::class, $post); // on construit le formulaire
+        $form->handleRequest($request);                    // on lie la requête
 
-        if ($form->isSubmitted() && $form->isValid()) {   // <-- on vérifie bien isValid()
-            $post->setAuthor($this->getUser());
-
-            if (!$post->getSlug()) {
-                $post->setSlug(strtolower($slugger->slug($post->getTitle())));
-            }
-            if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
-                $post->setPublishedAt(new \DateTimeImmutable());
-            }
-
+        if ($form->isSubmitted() && $form->isValid()) {    // on ne sauvegarde que si valide
             $em->persist($post);
             $em->flush();
-
             $this->addFlash('success', 'Article créé.');
-            return $this->redirectToRoute('app_post_index');
+            return $this->redirectToRoute('app_post_index'); // retour à la liste
         }
 
         return $this->render('post/new.html.twig', [
@@ -53,7 +44,7 @@ final class PostController extends AbstractController
     }
 
 
-    #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
+    #[Route('/{id}', name: 'app_post_show', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function show(Post $post): Response
     {
         return $this->render('post/show.html.twig', [
@@ -61,7 +52,7 @@ final class PostController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_post_edit', methods: ['GET', 'POST'])]
+    #[Route('/{id}/edit', name: 'app_post_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
     public function edit(Request $request, Post $post, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
         $form = $this->createForm(PostType::class, $post);
@@ -82,17 +73,16 @@ final class PostController extends AbstractController
             }
 
             $entityManager->flush();
-
             return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('post/edit.html.twig', [
             'post' => $post,
-            'form' => $form,
+            'form' => $form->createView(),
         ]);
     }
 
-    #[Route('/{id}', name: 'app_post_delete', methods: ['POST'])]
+    #[Route('/{id}', name: 'app_post_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function delete(Request $request, Post $post, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$post->getId(), $request->getPayload()->getString('_token'))) {
