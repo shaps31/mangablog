@@ -68,3 +68,8 @@ Commit:
 - Conserve recherche et catégorie dans les liens
   Commit : feat(blog): pagination simple (page=X) avec conservation des filtres
 
+
+## 2025-09-06 — Sprint 7
+- Ajout d'un menu Back-office dans la navbar (CRUD Articles/Catégories/Tags/Commentaires)
+- Visible uniquement si l'utilisateur est connecté
+Commit: ui(nav): menu Back-office (liens CRUD) visible pour l’utilisateur connecté
