@@ -1,12 +1,37 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}Accueil · MangaBlog{% endblock %}
+{% block title %}Accueil — MangaBlog{% endblock %}
 
 {% block body %}
-    <div class="p-5 bg-white border rounded-3">
-        <h1 class="h3 mb-3">Bienvenue sur MangaBlog</h1>
-        <p class="text-muted mb-0">
-            Objectif du projet : blog manga avec catégories, tags, commentaires, filtres & dashboard.
-        </p>
+    <div class="p-4 bg-white rounded shadow-sm mb-3">
+        <h1 class="h4 m-0">Bienvenue sur MangaBlog</h1>
+        <p class="text-muted mb-0">Actus & critiques manga.</p>
     </div>
+
+    {# Bloc derniers articles — safe même si "latest" n'est pas fourni #}
+    {% set latestSafe = latest|default([]) %}
+    {% if latestSafe is not empty %}
+        <h2 class="h6 mb-2">Derniers articles</h2>
+        <div class="row g-3">
+            {% for post in latestSafe %}
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
+                        <img src="{{ coverUrl }}" class="card-img-top" alt="">
+                        <div class="card-body">
+                            <h3 class="h6 card-title">{{ post.title }}</h3>
+                            <p class="text-muted small mb-2">
+                                {{ post.publishedAt ? post.publishedAt|date('d/m/Y') : '—' }}
+                            </p>
+                            <p class="card-text">
+                                {{ post.content|slice(0,120) }}{% if post.content|length > 120 %}…{% endif %}
+                            </p>
+                            <a class="btn btn-sm btn-primary" href="{{ path('blog_show', {slug: post.slug}) }}">Lire</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <a class="btn btn-outline-primary" href="{{ path('blog_index') }}">Voir le blog</a>
+    {% endif %}
 {% endblock %}
