@@ -15,14 +15,10 @@ class TagType extends AbstractType
     {
         $builder
             ->add('name')
-            ->add('slug')
-            ->add('posts', EntityType::class, [
-                'class' => Post::class,
-                'choice_label' => 'id',
-                'multiple' => true,
-            ])
-        ;
+            ->add('slug');
+
     }
+
 
     public function configureOptions(OptionsResolver $resolver): void
     {
