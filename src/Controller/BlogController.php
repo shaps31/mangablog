@@ -33,7 +33,7 @@ final class BlogController extends AbstractController
         // 📄 Recherche paginée des articles publiés avec filtres (q, catégorie, tag)
         // ⚠️ Nécessite que ton PostRepository accepte $tagId.
         // Signature attendue côté repo: searchPublishedPaginated(?string $q, ?int $categoryId, ?int $tagId, int $page, int $perPage = 5)
-        $pager = $posts->searchPublishedPaginated($q, $catId ?: null, $tagId ?: null, $page, 5);
+        $pager = $posts->searchPublishedPaginated($q, $catId ?: null, $tagId ?: null, $page, 10);
 
         $items = $pager['items']; // les articles de la page courante
 
@@ -61,7 +61,7 @@ final class BlogController extends AbstractController
             'page'        => $pager['page'],
             'pages'       => $pager['pages'],
 
-            // 'stats'    => $stats, // ← réactive si tu as déjà cette variable
+
         ]);
     }
 

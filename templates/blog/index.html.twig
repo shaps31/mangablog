@@ -3,34 +3,42 @@
 
 {% block body %}
     <div class="bg-white p-3 border rounded mb-3">
-        <form method="get" class="d-flex gap-2">
-            {# Champ de recherche texte #}
-            <input class="form-control" name="q" value="{{ q }}" placeholder="Rechercher un article…">
+        {# Formulaire GET : recherche + filtre catégorie + filtre tag #}
+        <form method="get" class="row g-2 mb-3">
+            <div class="col">
+                <input class="form-control"
+                       type="text"
+                       name="q"
+                       placeholder="Rechercher un article…"
+                       value="{{ q|default('') }}">
+            </div>
 
-            {# Select pour filtrer par catégorie #}
-            <select class="form-select" name="category">
-                <option value="0">Toutes catégories</option>
-                {% set currentCat = category|default(0) %}
-                {% for c in categories %}
-                    <option value="{{ c.id }}" {{ currentCat == c.id ? 'selected' : '' }}>
-                        {{ c.name }}
-                    </option>
-                {% endfor %}
-            </select>
+            <div class="col-3">
+                {# ⚠ On compare avec catId (fourni par le contrôleur) #}
+                <select class="form-select" name="category">
+                    <option value="0">Toutes catégories</option>
+                    {% for c in categories %}
+                        <option value="{{ c.id }}" {{ (catId|default(0) == c.id) ? 'selected' }}>
+                            {{ c.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
+            <div class="col-3">
+                <select class="form-select" name="tag">
+                    <option value="0">Tous les tags</option>
+                    {% for t in allTags %}
+                        <option value="{{ t.id }}" {{ (tag|default(0) == t.id) ? 'selected' }}>
+                            {{ t.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
 
-            {# ---- NOUVEAU : filtre par tag ---- #}
-            <select class="form-select" name="tag">
-                <option value="0">Tous les tags</option>
-                {% for t in allTags %}
-                    <option value="{{ t.id }}" {{ tag == t.id ? 'selected' }}>
-                        {{ t.name }}
-                    </option>
-                {% endfor %}
-            </select>
-
-            {# Bouton pour appliquer les filtres #}
-            <button class="btn btn-primary">Filtrer</button>
+            <div class="col-auto">
+                <button class="btn btn-primary">Filtrer</button>
+            </div>
         </form>
     </div>
 
@@ -38,22 +46,23 @@
     <div class="alert alert-secondary d-flex justify-content-between">
         <div>
             Ce mois-ci :
-            <strong>{{ totalMonth }}</strong> article{{ totalMonth>1?'s':'' }} publié{{ totalMonth>1?'s':'' }}.
+            <strong>{{ totalMonth }}</strong>
+            article{{ totalMonth>1?'s':'' }} publié{{ totalMonth>1?'s':'' }}.
         </div>
 
         <div class="d-flex gap-2 flex-wrap">
             {# Pastilles de stats par catégorie #}
             {% for row in totalsByCat %}
                 <span class="badge text-bg-dark">
-                    {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
-                </span>
+          {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
+        </span>
             {% endfor %}
 
             {# Pastille du tag actif si filtre utilisé #}
-            {% if tag %}
+            {% if tag|default(0) %}
                 <span class="badge text-bg-secondary ms-2">
-                    tag : {{ (allTags|filter(t => t.id == tag)|first).name }}
-                </span>
+          tag : {{ (allTags|filter(t => t.id == tag)|first).name }}
+        </span>
             {% endif %}
         </div>
     </div>
@@ -64,22 +73,18 @@
             <div class="col">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        {# Titre + lien vers la page article #}
                         <h2 class="h5 card-title mb-1">
                             <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
                         </h2>
 
-                        {# Image de couverture éventuelle #}
                         {% if post.cover %}
                             <img src="{{ post.cover }}" class="img-thumbnail me-3" style="max-height:120px" alt="Cover">
                         {% endif %}
 
-                        {# Date de publication + catégorie #}
                         <div class="text-muted small mb-2">
                             {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }} • {{ post.category.name }}
                         </div>
 
-                        {# Liste des tags du post #}
                         {% if post.tags|length %}
                             <div class="mb-1">
                                 {% for t in post.tags %}
@@ -88,10 +93,9 @@
                             </div>
                         {% endif %}
 
-                        {# Aperçu du contenu (tronqué à 180 caractères) #}
+                        {# Si tu n'as pas installé twig/string-extra, remplace |u.truncate... par slice/length #}
                         <p class="card-text mb-2">{{ post.content|u.truncate(180, '…') }}</p>
 
-                        {# Lien "Lire" #}
                         <a class="btn btn-sm btn-outline-primary"
                            href="{{ path('blog_show', { slug: post.slug }) }}">Lire</a>
                     </div>
@@ -100,31 +104,41 @@
         {% endfor %}
     </div>
 
-    {# Pagination (si plus d’une page) #}
-    {% if pages > 1 %}
-        <p class="text-muted small mb-2">Page {{ page }} / {{ pages }}</p>
-
+    {# Pagination (si plus d’une page).
+     On REUTILISE tous les paramètres de la requête courante et on ne change que "page". #}
+    {% if pages|default(1) > 1 %}
         <nav class="mt-3">
             <ul class="pagination">
-                {# bouton Précédent #}
-                <li class="page-item {{ page == 1 ? 'disabled' : '' }}">
-                    <a class="page-link"
-                       href="{{ path('blog_index', { q: q, category: catId, tag: tag, page: page - 1 }) }}">«</a>
-                </li>
 
-                {# boutons numérotés #}
-                {% for p in 1..pages %}
-                    <li class="page-item {{ p == page ? 'active' : '' }}">
+                {# « Précédent » : actif seulement si page > 1 #}
+                {% if page > 1 %}
+                    <li class="page-item">
                         <a class="page-link"
-                           href="{{ path('blog_index', { q: q, category: catId, tag: tag, page: p }) }}">{{ p }}</a>
+                           href="{{ path('blog_index', app.request.query.all|merge({'page': page-1})) }}">
+                            Précédent
+                        </a>
+                    </li>
+                {% endif %}
+
+                {# Liens numérotés 1..pages, on garde tous les filtres en cours #}
+                {% for p in 1..pages %}
+                    <li class="page-item {{ p == page ? 'active' }}">
+                        <a class="page-link"
+                           href="{{ path('blog_index', app.request.query.all|merge({'page': p})) }}">
+                            {{ p }}
+                        </a>
                     </li>
                 {% endfor %}
 
-                {# bouton Suivant #}
-                <li class="page-item {{ page == pages ? 'disabled' : '' }}">
-                    <a class="page-link"
-                       href="{{ path('blog_index', { q: q, category: catId, tag: tag, page: page + 1 }) }}">»</a>
-                </li>
+                {# « Suivant » : actif seulement si page < pages #}
+                {% if page < pages %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="{{ path('blog_index', app.request.query.all|merge({'page': page+1})) }}">
+                            Suivant
+                        </a>
+                    </li>
+                {% endif %}
             </ul>
         </nav>
     {% endif %}
