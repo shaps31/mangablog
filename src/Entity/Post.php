@@ -18,8 +18,8 @@ class Post
     #[ORM\Column]
     private ?int $id = null;
 
-    #[Assert\Length(min: 3, max: 150)]
     #[Assert\NotBlank]
+    #[Assert\Length(min: 3, max: 150)]
     private ?string $title = null;
 
     #[ORM\Column(length: 160)]

@@ -23,38 +23,35 @@ final class PostController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_post_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager,SluggerInterface $slugger): Response
+    public function new(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
         $post = new Post();
         $form = $this->createForm(PostType::class, $post);
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            // Associer l'auteur connecté
+        if ($form->isSubmitted() && $form->isValid()) {   // <-- on vérifie bien isValid()
             $post->setAuthor($this->getUser());
 
-            // Générer le slug si vide
             if (!$post->getSlug()) {
                 $post->setSlug(strtolower($slugger->slug($post->getTitle())));
             }
-
-            // Si on publie sans date -> maintenant
             if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
                 $post->setPublishedAt(new \DateTimeImmutable());
             }
 
-            $entityManager->persist($post);
-            $entityManager->flush();
+            $em->persist($post);
+            $em->flush();
 
-            return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
+            $this->addFlash('success', 'Article créé.');
+            return $this->redirectToRoute('app_post_index');
         }
 
         return $this->render('post/new.html.twig', [
             'post' => $post,
-            'form' => $form,
+            'form' => $form->createView(),
         ]);
     }
+
 
     #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
     public function show(Post $post): Response
