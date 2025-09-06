@@ -80,6 +80,57 @@ class PostRepository extends ServiceEntityRepository
             ->getArrayResult();                        // on récupère un tableau
     }
 
+    // Recherche les articles publiés avec filtres (mot-clé + catégorie)
+// mais en ajoutant la pagination (on divise les résultats en pages).
+    public function searchPublishedPaginated(?string $q, ?int $categoryId, int $page, int $perPage = 5): array
+    {
+        // Toujours garder au minimum la page 1
+        $page = max(1, $page);
+
+        // 1) Préparer la requête de base (articles publiés)
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->where('p.status = :status')
+            ->setParameter('status', 'published');
+
+        // Si un mot-clé est fourni → filtrer titre ou contenu
+        if ($q) {
+            $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
+                ->setParameter('q', '%'.$q.'%');
+        }
+
+        // Si une catégorie est fournie → filtrer par catégorie
+        if ($categoryId) {
+            $qb->andWhere('c.id = :cat')->setParameter('cat', $categoryId);
+        }
+
+        // 2) Compter le nombre total de résultats
+        // (on clone le query builder pour faire un COUNT séparé)
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
+
+        // 3) Récupérer seulement les résultats de la page demandée
+        $items = $qb->orderBy('p.publishedAt', 'DESC')
+            ->setFirstResult(($page - 1) * $perPage) // décalage de départ (offset)
+            ->setMaxResults($perPage)                // nombre max d’éléments par page
+            ->getQuery()
+            ->getResult();
+
+        // Calcul du nombre total de pages
+        $pages = (int) max(1, ceil($total / $perPage));
+
+        // On retourne un tableau complet avec les infos utiles
+        return [
+            'items'   => $items,   // la liste d’articles de la page en cours
+            'total'   => $total,   // nombre total d’articles trouvés
+            'page'    => $page,    // page actuelle
+            'pages'   => $pages,   // nombre total de pages
+            'perPage' => $perPage, // combien d’articles par page
+        ];
+    }
+
+
+
 
 
 }

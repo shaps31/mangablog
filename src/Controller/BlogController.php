@@ -17,29 +17,39 @@ final class BlogController extends AbstractController
     #[Route('/blog', name: 'blog_index')]
     public function index(Request $request, PostRepository $posts, CategoryRepository $categories): Response
     {
-        $q = $request->query->get('q');                 // recherche texte
-        $catId = $request->query->getInt('category');    // filtre catégorie (id)
+        // 🔍 On récupère les filtres envoyés dans l’URL (GET)
+        $q     = $request->query->get('q');                 // texte à rechercher
+        $catId = $request->query->getInt('category');       // id de catégorie (si sélectionnée)
+        $page  = max(1, $request->query->getInt('page', 1)); // numéro de page (par défaut 1)
 
+        // 📊 On utilise la méthode avec pagination
+        $pager = $posts->searchPublishedPaginated($q, $catId, $page, 5);
+        $items = $pager['items']; // les articles de la page courante
+
+        // 📅 On calcule le total des articles publiés ce mois-ci
         $start = (new \DateTimeImmutable('first day of this month 00:00:00'));
-        $end = (new \DateTimeImmutable('last day of this month 23:59:59'));
+        $end   = (new \DateTimeImmutable('last day of this month 23:59:59'));
+        $totalMonth  = $posts->countPublishedBetween($start, $end);
 
-        $totalMonth = $posts->countPublishedBetween($start, $end);
+        // 📊 On calcule les totaux par catégorie ce mois-ci
         $totalsByCat = $posts->countByCategoryBetween($start, $end);
 
-
-        $items = $posts->searchPublished($q, $catId);    // seulement les articles "published"
+        // 📂 Toutes les catégories (pour afficher un filtre dans le template)
         $cats = $categories->findAll();
 
+        // 🎨 On envoie toutes les infos au template
         return $this->render('blog/index.html.twig', [
-            'posts' => $items,
-            'q' => $q,
-            'catId' => $catId,
-            'categories' => $cats,
-            'totalMonth' => $totalMonth,
-            'totalsByCat' => $totalsByCat,
+            'posts'       => $items,         // les articles de la page
+            'q'           => $q,             // valeur du champ recherche
+            'catId'       => $catId,         // catégorie sélectionnée
+            'categories'  => $cats,          // toutes les catégories
+            'totalMonth'  => $totalMonth,    // total d’articles publiés ce mois
+            'totalsByCat' => $totalsByCat,   // totaux par catégorie
+            // 📄 infos de pagination
+            'page'        => $pager['page'],
+            'pages'       => $pager['pages'],
         ]);
     }
-
 
     #[Route('/blog/{slug}', name: 'blog_show', methods: ['GET', 'POST'])]
     public function show(
@@ -50,16 +60,19 @@ final class BlogController extends AbstractController
         string                 $slug
     ): Response
     {
+        // 🔎 On récupère l’article publié correspondant au slug
         $post = $posts->findOneBy(['slug' => $slug, 'status' => 'published']);
         if (!$post) {
             throw $this->createNotFoundException('Article introuvable');
         }
 
+        // 💬 On récupère les commentaires approuvés (status = approved)
         $approved = $commentsRepo->findBy(
             ['post' => $post, 'status' => 'approved'],
             ['createdAt' => 'DESC']
         );
 
+        // 📝 Formulaire de commentaire (visible uniquement pour un utilisateur connecté)
         $formView = null;
         if ($this->getUser()) {
             $comment = new Comment();
@@ -69,12 +82,15 @@ final class BlogController extends AbstractController
 
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
+                // Associer le commentaire à l’article et à l’utilisateur
                 $comment->setPost($post);
                 $comment->setAuthor($this->getUser());
                 $comment->setCreatedAt(new \DateTimeImmutable());
-                $comment->setStatus('pending');
+                $comment->setStatus('pending'); // pas publié tant que non validé
+
                 $em->persist($comment);
                 $em->flush();
+
                 $this->addFlash('success', 'Commentaire envoyé. Il sera visible après validation.');
                 return $this->redirectToRoute('blog_show', ['slug' => $post->getSlug()]);
             }
@@ -82,9 +98,9 @@ final class BlogController extends AbstractController
         }
 
         return $this->render('blog/show.html.twig', [
-            'post' => $post,
+            'post'     => $post,
             'comments' => $approved,
-            'form' => $formView,
+            'form'     => $formView,
         ]);
     }
 }
