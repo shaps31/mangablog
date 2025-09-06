@@ -10,15 +10,21 @@
     {% block styles %}{% endblock %}
 </head>
 <body class="bg-light">
-<div class="d-flex gap-2">
-    {% if app.user %}
-        <span class="navbar-text small me-2">Connecté en tant que {{ app.user.userIdentifier }}</span>
-        <a class="btn btn-outline-light btn-sm" href="{{ path('app_logout') }}">Se déconnecter</a>
-    {% else %}
-        <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
-        <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
-    {% endif %}
-</div>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="{{ path('app_home') }}">MangaBlog</a>
+
+        <div class="d-flex align-items-center gap-2">
+            {% if app.user %}
+                <span class="navbar-text small me-2">Connecté en tant que {{ app.user.userIdentifier }}</span>
+                <a class="btn btn-outline-light btn-sm" href="{{ path('app_logout') }}">Se déconnecter</a>
+            {% else %}
+                <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
+                <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
 
 
 <main class="container py-4">
