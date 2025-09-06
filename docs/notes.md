@@ -45,3 +45,10 @@ Commits:
 
 Commits:
 - ajout(blog): liste publique avec recherche et filtre catégorie + page article
+
+## 2025-09-06 — Sprint 3 (suite)
+- Totaux du mois (articles publiés) + répartition par catégorie
+- Affichage en haut de /blog
+
+Commit:
+- ajout(blog): totaux du mois (global + par catégorie) sur la liste publique
