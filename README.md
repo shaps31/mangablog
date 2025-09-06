@@ -8,7 +8,7 @@ Blog d’actus & critiques manga (Symfony 7, Bootstrap, SQLite).
 - `symfony server:start -d`
 
 ## Sprints
-- Sprint 0 : Bootstrap (layout + accueil) ✅
+- Sprint 0 : Bootstrap (layout + accueil) 
 - Sprint 1 : Auth (register/login, rôles, routes protégées)
 - Sprint 2 : Entités (Post, Category, Tag, Comment) + migrations
 - Sprint 3 : CRUD admin + validations
