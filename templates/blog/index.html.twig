@@ -41,10 +41,22 @@
                         {% if post.cover %}
                             <img src="{{ post.cover }}" class="img-thumbnail me-3" style="max-height:120px" alt="Cover">
                         {% endif %}
+                        {% if post.cover %}
+                            <img src="{{ post.cover }}" alt="" style="height:48px" class="img-thumbnail">
+                        {% endif %}
+
 
                         <div class="text-muted small mb-2">
                             {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }} • {{ post.category.name }}
                         </div>
+                        {% if post.tags|length %}
+                            <div class="mb-1">
+                                {% for t in post.tags %}
+                                    <span class="badge text-bg-light border me-1">{{ t.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         <p class="card-text mb-2">{{ post.content|u.truncate(180, '…') }}</p>
 
                         <a class="btn btn-sm btn-outline-primary"
