@@ -3,33 +3,70 @@
 {% block title %}{{ post.title }} — MangaBlog{% endblock %}
 
 {% block body %}
+    {# Fil d’Ariane #}
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ path('app_home') }}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{{ path('blog_index') }}">Blog</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ post.title }}</li>
+        </ol>
+    </nav>
+
     <article class="bg-white p-4 border rounded mb-4">
         <h1 class="h3 mb-2">{{ post.title }}</h1>
 
-        {# ✅ Cover avec fallback local si post.cover est vide #}
-        {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-        <img src="{{ coverUrl }}" class="img-fluid rounded mb-3" alt="Couverture">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ path('app_home') }}">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('blog_index') }}">Blog</a></li>
+                <li class="breadcrumb-item active" aria-current="page">{{ post.title }}</li>
+            </ol>
+        </nav>
 
-        {# 🔗 Badges de tags cliquables (renvoient vers la liste filtrée par ce tag) #}
-        {% if post.tags|length %}
-            <div class="mb-3">
-                {% for t in post.tags %}
-                    <a
-                        class="badge bg-secondary text-decoration-none me-1"
-                        href="{{ path('blog_index', {'tag': t.id, 'page': 1}) }}"
-                    >
-                        {{ t.name }}
-                    </a>
-                {% endfor %}
-            </div>
-        {% endif %}
+        <div class="mb-3">
+            {% if post.category %}
+                <a class="badge text-bg-primary me-1"
+                   href="{{ path('blog_index', {'category': post.category.id}) }}">
+                    {{ post.category.name }}
+                </a>
+            {% endif %}
+
+            {% for t in post.tags %}
+                <a class="badge text-bg-secondary text-decoration-none me-1"
+                   href="{{ path('blog_index', {'tag': t.id}) }}">
+                    {{ t.name }}
+                </a>
+            {% endfor %}
+        </div>
+
+        {# ⏱ Estimation lecture ~200 wpm #}
+        {% set words = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
+        {% set minutes = (words / 200)|round(0, 'ceil') %}
+        <span class="text-muted small d-inline-block mb-2">⏱ {{ minutes }} min de lecture</span>
+
+        {# Cover : fallback + alt + lazy #}
+        {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
+        <img src="{{ coverUrl }}" class="img-fluid rounded mb-3" alt="Couverture : {{ post.title }}" loading="lazy">
+
+        {# Badges catégorie + tags #}
+        <div class="mb-2">
+            {% if post.category %}
+                <span class="badge text-bg-primary me-1">{{ post.category.name }}</span>
+            {% endif %}
+            {% for t in post.tags %}
+                <a class="badge text-bg-secondary text-decoration-none me-1"
+                   href="{{ path('blog_index', {'tag': t.id, 'page': 1}) }}">
+                    {{ t.name }}
+                </a>
+            {% endfor %}
+        </div>
 
         <div class="text-muted small mb-3">
             Publié {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : 'brouillon' }}
-            • Catégorie : {{ post.category.name }}
+            {% if post.category %} • Catégorie : {{ post.category.name }}{% endif %}
         </div>
 
-        {# Affichage du contenu avec respect des retours à la ligne #}
+        {# Contenu avec retours à la ligne #}
         <div style="white-space: pre-line;">
             {{ post.content }}
         </div>
@@ -39,7 +76,28 @@
         </div>
     </article>
 
-    <h2 class="h5 mb-3">Commentaires</h2>
+    {# Articles liés (même catégorie) #}
+    {% if related is defined and related|length %}
+        <h5 class="mt-4">Dans la même catégorie</h5>
+        <div class="row">
+            {% for r in related %}
+                <div class="col-md-4">
+                    <a class="text-decoration-none" href="{{ path('blog_show', {slug: r.slug}) }}">
+                        <div class="card mb-3 h-100">
+                            {% set rCover = r.cover ?: asset('img/cover-placeholder.png') %}
+                            <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}" loading="lazy">
+                            <div class="card-body">
+                                <strong class="d-block mb-1">{{ r.title }}</strong>
+                                <div class="text-muted small">{{ r.publishedAt ? r.publishedAt|date('d/m/Y') : '' }}</div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <h2 class="h5 my-3">Commentaires</h2>
 
     {% if comments is empty %}
         <p class="text-muted">Aucun commentaire approuvé pour le moment.</p>
@@ -56,7 +114,6 @@
         </div>
     {% endif %}
 
-    {# Formulaire de commentaire si connecté #}
     {% if app.user %}
         <div class="bg-white p-3 border rounded">
             <h3 class="h6">Laisser un commentaire</h3>
