@@ -1,39 +1,96 @@
-{% block title %}Créer un article{% endblock %}
-{% block body %}
-    <h1 class="h3 mb-3">Créer un article</h1>
-    {{ form_start(form) }}
-    {{ form_widget(form) }}
+{# templates/post/_form.html.twig #}
+{{ form_start(form) }}
 
-    <div class="mb-3">
-        <img id="coverPreview" class="img-thumbnail d-none" style="max-height:160px" alt="Aperçu cover">
+{# éventuelle erreur globale du formulaire #}
+{% if form.vars.errors|length %}
+    <div class="alert alert-danger mb-3">
+        {{ form_errors(form) }}
+    </div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-12">
+        {{ form_row(form.title, {
+            attr: { autofocus: true, placeholder: 'Titre de l’article' }
+        }) }}
     </div>
 
-    <button class="btn btn-primary">Enregistrer</button>
-    {{ form_end(form) }}
-{% endblock %}
-{% block scripts %}
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const cover = document.getElementById('post_cover');
-            const preview = document.getElementById('coverPreview');
-            if (!cover || !preview) return;
+    {# 👉 le slug avec message d’aide et erreurs automatiques #}
+    <div class="col-12">
+        {{ form_row(form.slug, {
+            help: 'Laisse vide pour être auto-généré depuis le titre.'
+        }) }}
+    </div>
 
-            function showPreview(url) {
-                if (!url || !/^https?:\/\//i.test(url)) { // on reste simple: URL http(s)
-                    preview.classList.add('d-none');
-                    preview.removeAttribute('src');
-                    return;
+    <div class="col-12">
+        {{ form_row(form.content, { attr: { rows: 10 } }) }}
+    </div>
+
+    <div class="col-md-4">
+        {{ form_row(form.status) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_row(form.publishedAt) }}
+    </div>
+    <div class="col-md-4">
+        {{ form_row(form.rating) }}
+    </div>
+
+    <div class="col-12">
+        {# ✅ Champ cover avec aide mise à jour #}
+        {{ form_row(form.cover, {
+            help: 'Colle une URL d’image (ex: https://exemple.com/cover.jpg)'
+        }) }}
+
+        {# ✅ Aperçu visuel de la cover #}
+        <div class="mt-2">
+            <img id="coverPreview"
+                 alt="Aperçu de l’image de couverture"
+                 class="img-thumbnail d-none"
+                 style="max-height:220px"
+                 loading="lazy">
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        {{ form_row(form.category) }}
+    </div>
+    <div class="col-md-6">
+        {{ form_row(form.tags) }}
+    </div>
+</div>
+
+<button class="btn btn-primary mt-3">
+    {{ button_label|default('Enregistrer') }}
+</button>
+
+{{ form_end(form) }}
+
+{# ✅ Petit JS local : montre/masque l’aperçu selon l’URL #}
+{% block scripts %}
+    {{ parent() }}
+    <script>
+        (function () {
+            const input = document.getElementById('post_cover');
+            const img   = document.getElementById('coverPreview');
+            if (!input || !img) return;
+
+            const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
+
+            function update() {
+                const url = input.value.trim();
+                if (isHttpUrl(url)) {
+                    img.src = url;
+                    img.classList.remove('d-none');
+                } else {
+                    img.classList.add('d-none');
+                    img.removeAttribute('src');
                 }
-                preview.src = url;
-                preview.classList.remove('d-none');
             }
 
-            // affiche si on revient sur une page avec une valeur déjà saisie
-            showPreview(cover.value);
-
-            cover.addEventListener('input', function () {
-                showPreview(cover.value.trim());
-            });
-        });
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+            update(); // initial (utile en édition)
+        })();
     </script>
 {% endblock %}
