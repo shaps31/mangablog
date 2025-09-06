@@ -1,9 +1,39 @@
-
 {% block title %}Créer un article{% endblock %}
 {% block body %}
     <h1 class="h3 mb-3">Créer un article</h1>
     {{ form_start(form) }}
     {{ form_widget(form) }}
+
+    <div class="mb-3">
+        <img id="coverPreview" class="img-thumbnail d-none" style="max-height:160px" alt="Aperçu cover">
+    </div>
+
     <button class="btn btn-primary">Enregistrer</button>
     {{ form_end(form) }}
+{% endblock %}
+{% block scripts %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const cover = document.getElementById('post_cover');
+            const preview = document.getElementById('coverPreview');
+            if (!cover || !preview) return;
+
+            function showPreview(url) {
+                if (!url || !/^https?:\/\//i.test(url)) { // on reste simple: URL http(s)
+                    preview.classList.add('d-none');
+                    preview.removeAttribute('src');
+                    return;
+                }
+                preview.src = url;
+                preview.classList.remove('d-none');
+            }
+
+            // affiche si on revient sur une page avec une valeur déjà saisie
+            showPreview(cover.value);
+
+            cover.addEventListener('input', function () {
+                showPreview(cover.value.trim());
+            });
+        });
+    </script>
 {% endblock %}
