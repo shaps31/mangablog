@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\CommentRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 final class BlogController extends AbstractController
 {
@@ -47,48 +48,50 @@ final class BlogController extends AbstractController
         string                 $slug
     ): Response
     {
-        $post = $posts->findOneBy(['slug' => $slug, 'status' => 'published']);
-        if (!$post) {
-            throw $this->createNotFoundException('Article introuvable');
-        }
-
-        // Liste des commentaires approuvés pour cet article
-        $approved = $commentsRepo->findBy(
-            ['post' => $post, 'status' => 'approved'],
-            ['createdAt' => 'DESC']
-        );
-
-        // Formulaire minimal pour poster un commentaire (contenu uniquement)
-        $formView = null;
-        if ($this->getUser()) {
-            $comment = new Comment();
-
-            $form = $this->createFormBuilder($comment)
-                ->add('content')
-                ->getForm();
-
-            $form->handleRequest($request);
-
-            if ($form->isSubmitted() && $form->isValid()) {
-                $comment->setPost($post);
-                $comment->setAuthor($this->getUser());
-                $comment->setCreatedAt(new \DateTimeImmutable());
-                $comment->setStatus('pending'); // modération
-
-                $em->persist($comment);
-                $em->flush();
-
-                $this->addFlash('success', 'Commentaire envoyé. Il sera visible après validation.');
-                return $this->redirectToRoute('blog_show', ['slug' => $post->getSlug()]);
+        {
+            $post = $posts->findOneBy(['slug' => $slug, 'status' => 'published']);
+            if (!$post) {
+                throw $this->createNotFoundException('Article introuvable');
             }
 
-            $formView = $form->createView();
-        }
+            // Liste des commentaires approuvés pour cet article
+            $approved = $commentsRepo->findBy(
+                ['post' => $post, 'status' => 'approved'],
+                ['createdAt' => 'DESC']
+            );
 
-        return $this->render('blog/show.html.twig', [
-            'post' => $post,
-            'comments' => $approved,
-            'form' => $formView,
-        ]);
+            // Formulaire minimal pour poster un commentaire (contenu uniquement)
+            $formView = null;
+            if ($this->getUser()) {
+                $comment = new Comment();
+
+                $form = $this->createFormBuilder($comment)
+                    ->add('content')
+                    ->getForm();
+
+                $form->handleRequest($request);
+
+                if ($form->isSubmitted() && $form->isValid()) {
+                    $comment->setPost($post);
+                    $comment->setAuthor($this->getUser());
+                    $comment->setCreatedAt(new \DateTimeImmutable());
+                    $comment->setStatus('pending'); // modération
+
+                    $em->persist($comment);
+                    $em->flush();
+
+                    $this->addFlash('success', 'Commentaire envoyé. Il sera visible après validation.');
+                    return $this->redirectToRoute('blog_show', ['slug' => $post->getSlug()]);
+                }
+
+                $formView = $form->createView();
+            }
+
+            return $this->render('blog/show.html.twig', [
+                'post' => $post,
+                'comments' => $approved,
+                'form' => $formView,
+            ]);
+        }
     }
 }
