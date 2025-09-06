@@ -12,6 +12,22 @@
                        placeholder="Rechercher un article…"
                        value="{{ q|default('') }}">
             </div>
+            {% set hasFilters = (q|default('')|length > 0) or (category|default(0) != 0) or (tag|default(0) != 0) %}
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <p class="small text-muted m-0">
+                    {{ totalResults }} résultat{{ totalResults > 1 ? 's' : '' }}
+                    {% if q %} pour « {{ q }} »{% endif %}
+                </p>
+
+                {% if hasFilters %}
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ path('blog_index') }}">
+                        Réinitialiser
+                    </a>
+                {% endif %}
+            </div>
+
 
             <div class="col-3">
                 {# ⚠ On compare avec catId (fourni par le contrôleur) #}

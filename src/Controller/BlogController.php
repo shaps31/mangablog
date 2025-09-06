@@ -60,6 +60,8 @@ final class BlogController extends AbstractController
             // 🔄 Infos de pagination
             'page'        => $pager['page'],
             'pages'       => $pager['pages'],
+            'totalResults' => $pager['total'],
+
 
 
         ]);
