@@ -11,47 +11,66 @@ use Symfony\Component\Routing\Attribute\Route;
 use App\Repository\CommentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Entity\Comment;
+use App\Repository\TagRepository;
 
 final class BlogController extends AbstractController
 {
     #[Route('/blog', name: 'blog_index')]
-    public function index(Request $request, PostRepository $posts, CategoryRepository $categories): Response
+    public function index(
+        Request $request,
+        PostRepository $posts,
+        CategoryRepository $categories,
+        TagRepository $tagRepository
+    ): Response
     {
-        // 🔍 On récupère les filtres envoyés dans l’URL (GET)
-        $q     = $request->query->get('q');                 // texte à rechercher
-        $catId = $request->query->getInt('category');       // id de catégorie (si sélectionnée)
-        $page  = max(1, $request->query->getInt('page', 1)); // numéro de page (par défaut 1)
+        // 🔍 Récupération des filtres depuis l’URL (GET)
+        $q      = $request->query->get('q', '');                 // texte recherché
+        $catId  = $request->query->getInt('category', 0);        // id de catégorie (0 = pas de filtre)
+        $tagId  = $request->query->getInt('tag', 0);             // id de tag (0 = pas de filtre)
+        $page   = max(1, $request->query->getInt('page', 1));    // numéro de page (≥ 1)
 
-        // 📊 On utilise la méthode avec pagination
-        $pager = $posts->searchPublishedPaginated($q, $catId, $page, 5);
+        // 📄 Recherche paginée des articles publiés avec filtres (q, catégorie, tag)
+        // ⚠️ Nécessite que ton PostRepository accepte $tagId.
+        // Signature attendue côté repo: searchPublishedPaginated(?string $q, ?int $categoryId, ?int $tagId, int $page, int $perPage = 5)
+        $pager = $posts->searchPublishedPaginated(
+            q: $q,
+            categoryId: $catId ?: null,
+            tagId: $tagId ?: null,
+            page: $page,
+            perPage: 5
+        );
         $items = $pager['items']; // les articles de la page courante
 
-        // 📅 On calcule le total des articles publiés ce mois-ci
-        $start = (new \DateTimeImmutable('first day of this month 00:00:00'));
-        $end   = (new \DateTimeImmutable('last day of this month 23:59:59'));
-        $totalMonth  = $posts->countPublishedBetween($start, $end);
+        // 📂 Données pour les filtres (liste complète)
+        $allCategories = $categories->findAll();
+        $allTags       = $tagRepository->findBy([], ['name' => 'ASC']);
 
-        // 📊 On calcule les totaux par catégorie ce mois-ci
-        $totalsByCat = $posts->countByCategoryBetween($start, $end);
+        // 📅 Statistiques du mois en cours (totaux globaux et par catégorie)
+        $start        = new \DateTimeImmutable('first day of this month 00:00:00');
+        $end          = new \DateTimeImmutable('last day of this month 23:59:59');
+        $totalMonth   = $posts->countPublishedBetween($start, $end);
+        $totalsByCat  = $posts->countByCategoryBetween($start, $end);
 
-        // 📂 Toutes les catégories (pour afficher un filtre dans le template)
-        $cats = $categories->findAll();
-
-        // 🎨 On envoie toutes les infos au template
+        // 🎨 Envoi au template
         return $this->render('blog/index.html.twig', [
-            'posts'       => $items,         // les articles de la page
-            'q'           => $q,             // valeur du champ recherche
-            'catId'       => $catId,         // catégorie sélectionnée
-            'categories'  => $cats,          // toutes les catégories
-            'totalMonth'  => $totalMonth,    // total d’articles publiés ce mois
-            'totalsByCat' => $totalsByCat,   // totaux par catégorie
-            // 📄 infos de pagination
+            'posts'       => $items,          // articles de la page
+            'q'           => $q,              // valeur du champ recherche
+            'catId'       => $catId,          // filtre catégorie sélectionné
+            'tag'         => $tagId,          // filtre tag sélectionné
+            'categories'  => $allCategories,  // toutes les catégories
+            'allTags'     => $allTags,        // tous les tags (triés par nom)
+            'totalMonth'  => $totalMonth,     // total du mois
+            'totalsByCat' => $totalsByCat,    // total par catégorie
+            // 🔄 Infos de pagination
             'page'        => $pager['page'],
             'pages'       => $pager['pages'],
+
+            // 'stats'    => $stats, // ← réactive si tu as déjà cette variable
         ]);
     }
 
-    #[Route('/blog/{slug}', name: 'blog_show', methods: ['GET', 'POST'])]
+
+        #[Route('/blog/{slug}', name: 'blog_show', methods: ['GET', 'POST'])]
     public function show(
         Request                $request,
         PostRepository         $posts,

@@ -16,35 +16,47 @@ class PostRepository extends ServiceEntityRepository
         parent::__construct($registry, Post::class);
     }
 
-    // Recherche les articles publiés, avec filtres optionnels :
-    // - $q : mot-clé à chercher dans le titre ou le contenu
-    // - $categoryId : limiter à une catégorie précise
-    public function searchPublished(?string $q = null, ?int $categoryId = null): array
+    /**
+     * Recherche des articles publiés avec filtres optionnels.
+     *
+     * @param string $q         Mot-clé pour chercher dans le titre ou le contenu (vide = pas de filtre)
+     * @param int    $categoryId Id de la catégorie à filtrer (0 = pas de filtre)
+     * @param int    $tagId      Id du tag à filtrer (0 = pas de filtre)
+     *
+     * @return array Liste des articles trouvés
+     */
+    public function searchPublished(string $q = '', int $categoryId = 0, int $tagId = 0): array
     {
-        // On prépare une requête de base sur les posts (alias "p")
+        // On commence une requête sur Post (alias "p")
         $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c') // on relie Post à Category pour pouvoir filtrer
-            ->where('p.status = :status')                 // seulement les articles publiés
-            ->setParameter('status', 'published')
-            ->orderBy('p.publishedAt', 'DESC');           // tri du plus récent au plus ancien
+            ->leftJoin('p.category', 'c')->addSelect('c') // jointure pour récupérer la catégorie
+            ->leftJoin('p.tags', 't')->addSelect('t')     // jointure pour récupérer les tags
+            ->andWhere('p.status = :pub')                 // on ne garde que les articles publiés
+            ->setParameter('pub', 'published')
+            ->orderBy('p.publishedAt', 'DESC');           // tri : les plus récents d’abord
 
-        // Si un mot-clé ($q) est fourni,
-        // on filtre en cherchant ce mot dans le titre OU le contenu
-        if ($q) {
+        // Si on a un mot-clé, on cherche dans le titre ou le contenu
+        if ($q !== '') {
             $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
-                ->setParameter('q', '%'.$q.'%');           // % = recherche partielle (contient le mot)
+                ->setParameter('q', '%'.$q.'%'); // % = recherche "contient"
         }
 
-        // Si un id de catégorie est fourni ($categoryId),
-        // on limite les résultats à cette catégorie
-        if ($categoryId) {
-            $qb->andWhere('c.id = :cat')
-                ->setParameter('cat', $categoryId);
+        // Si on a une catégorie précise, on filtre par son id
+        if ($categoryId > 0) {
+            $qb->andWhere('c.id = :cid')
+                ->setParameter('cid', $categoryId);
         }
 
-        // On exécute la requête et on récupère tous les résultats
+        // Si on a un tag précis, on filtre aussi par son id
+        if ($tagId > 0) {
+            $qb->andWhere('t.id = :tid')
+                ->setParameter('tid', $tagId);
+        }
+
+        // On exécute la requête et on renvoie la liste d’articles
         return $qb->getQuery()->getResult();
     }
+
 
 
     // Compte le nombre total de posts publiés
