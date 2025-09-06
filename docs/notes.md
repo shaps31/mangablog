@@ -22,3 +22,17 @@ Commits:
 - ajout(auth): page d’inscription (/register) avec hash du mot de passe
 - ajout(ui): liens navbar Register/Login/Logout avec état connecté
 - tache(securite): protéger les préfixes /admin, /post, /comment
+
+## 2025-09-06 — Sprint 2
+- Entités créées (Category, Tag, Post, Comment) + migrations
+- CRUD générés
+- Règles Post (author, slug, publishedAt)
+- Validations Post/Comment
+- Sécurité des routes CRUD
+
+Commits:
+- ajout(db): migrations initiales …
+- ajout(crud): Category, Tag, Post, Comment …
+- amelioration(post): …
+- amelioration(validation): …
+- tache(securite): …
