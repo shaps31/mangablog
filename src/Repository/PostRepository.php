@@ -6,6 +6,7 @@ use App\Entity\Post;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
+
 /**
  * @extends ServiceEntityRepository<Post>
  */
@@ -92,74 +93,78 @@ class PostRepository extends ServiceEntityRepository
             ->getArrayResult();                        // on récupère un tableau
     }
 
-    // Recherche les articles publiés avec filtres (mot-clé + catégorie)
-    // mais en ajoutant la pagination (on divise les résultats en pages).
-       /**
-     * Recherche paginée des articles publiés.
+    /**
+     * Recherche paginée des articles publiés avec filtres.
      *
-     * @param string|null $q         Mot-clé à chercher (dans titre ou contenu)
-     * @param int|null    $categoryId Id de la catégorie à filtrer (facultatif)
-     * @param int         $page       Numéro de la page demandée (>=1)
+     * @param string|null $q         Mot-clé (recherche dans titre ou contenu)
+     * @param int|null    $categoryId Id de la catégorie (null = pas de filtre)
+     * @param int|null    $tagId      Id du tag (null = pas de filtre)
+     * @param int         $page       Numéro de page (commence à 1)
      * @param int         $perPage    Nombre d’articles par page (par défaut 5)
      *
      * @return array{
-     *   items: array,   // les articles de la page courante
+     *   items: array,   // liste des articles de la page courante
      *   total: int,     // nombre total d’articles trouvés
-     *   page: int,      // numéro de la page actuelle
-     *   pages: int,     // nombre total de pages
-     *   perPage: int    // nombre d’articles par page
+     *   page: int,      // page actuelle
+     *   perPage: int    // combien d’articles par page
      * }
      */
-    public function searchPublishedPaginated(?string $q, ?int $categoryId, int $page, int $perPage = 5): array
-    {
-        // On s’assure que la page est au minimum 1
-        $page = max(1, $page);
+    public function searchPublishedPaginated(
+        ?string $q,
+        ?int $categoryId,
+        ?int $tagId,
+        int $page,
+        int $perPage = 5
+    ): array {
+        // 1) Construire la requête de base (tous les articles publiés, sans pagination)
+        $baseQb = $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c') // jointure catégorie
+            ->leftJoin('p.tags', 't')->addSelect('t')     // jointure tags
+            ->andWhere('p.status = :pub')                 // uniquement "published"
+            ->setParameter('pub', 'published');
 
-        // 1) Base de la requête : on sélectionne uniquement les articles publiés
-        $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c') // on joint la catégorie
-            ->where('p.status = :status')
-            ->setParameter('status', 'published');
-
-        // Si un mot-clé est fourni, on cherche dans le titre OU le contenu
+        // Filtre par mot-clé (titre ou contenu)
         if ($q) {
-            $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
-                ->setParameter('q', '%'.$q.'%'); // % = recherche "contient"
+            $baseQb->andWhere('p.title LIKE :q OR p.content LIKE :q')
+                ->setParameter('q', '%'.$q.'%');
         }
 
-        // Si une catégorie est précisée, on ajoute un filtre sur son id
+        // Filtre par catégorie
         if ($categoryId) {
-            $qb->andWhere('c.id = :cat')
-                ->setParameter('cat', $categoryId);
+            $baseQb->andWhere('c.id = :cid')
+                ->setParameter('cid', $categoryId);
         }
 
-        // 2) Compter le nombre total de résultats (COUNT)
-        // On clone le QueryBuilder pour réutiliser les mêmes filtres
-        $countQb = clone $qb;
-        $total = (int) $countQb
-            ->select('COUNT(p.id)')
-            ->getQuery()
+        // Filtre par tag
+        if ($tagId) {
+            $baseQb->andWhere('t.id = :tid')
+                ->setParameter('tid', $tagId);
+        }
+
+        // 2) Requête de comptage (total d’articles correspondant aux filtres)
+        $countQb = clone $baseQb;
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)') // DISTINCT car jointures peuvent dupliquer
+        ->resetDQLPart('orderBy') // on enlève le tri, inutile pour COUNT
+        ->getQuery()
             ->getSingleScalarResult();
 
-        // 3) Récupérer uniquement les résultats de la page demandée
-        $items = $qb->orderBy('p.publishedAt', 'DESC')   // tri du + récent au + ancien
-        ->setFirstResult(($page - 1) * $perPage)     // OFFSET (ex: page 2 → on saute les 5 premiers)
-        ->setMaxResults($perPage)                    // LIMIT (combien d’articles max par page)
-        ->getQuery()
+        // 3) Requête finale pour récupérer uniquement la page demandée
+        $items = (clone $baseQb)
+            ->orderBy('p.publishedAt', 'DESC')            // tri : les plus récents en premier
+            ->setFirstResult(max(0, $page - 1) * $perPage) // OFFSET : où commencer
+            ->setMaxResults($perPage)                      // LIMIT : combien d’articles max
+            ->getQuery()
             ->getResult();
 
-        // Nombre total de pages (arrondi vers le haut)
-        $pages = (int) max(1, ceil($total / $perPage));
-
-        // On renvoie toutes les infos utiles pour l’affichage
+        // 4) On retourne les infos utiles au contrôleur/vue
         return [
-            'items'   => $items,   // articles de la page actuelle
-            'total'   => $total,   // combien au total
-            'page'    => $page,    // page actuelle
-            'pages'   => $pages,   // combien de pages en tout
+            'items'   => $items,   // les articles de cette page
+            'total'   => $total,   // nombre total de résultats trouvés
+            'page'    => $page,    // la page actuelle
             'perPage' => $perPage, // combien d’articles par page
         ];
     }
+
 
     /**
      * Articles publiés pour l'export CSV.
