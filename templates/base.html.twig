@@ -1,68 +1,79 @@
-{# templates/base.html.twig — Layout global Bootstrap (CDN) #}
+{# templates/base.html.twig #}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="h-100">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}MangaBlog{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {# CSS Bootstrap via CDN pour aller vite #}
+
+    {# Bootstrap CSS #}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    {# Laisse un crochet pour des styles spécifiques aux pages #}
     {% block styles %}{% endblock %}
+
+    {# Quand la barre de debug Symfony est visible, évite qu'elle masque le footer #}
+    {% if app.debug %}
+        <style> footer { margin-bottom: 46px; } </style>
+    {% endif %}
 </head>
-<body class="bg-light">
+
+{# Sticky layout: html.h-100 + body.h-100.d-flex.flex-column #}
+<body class="bg-light d-flex flex-column h-100">
+
 <nav class="navbar navbar-dark bg-dark">
-    <div class="container">
+    <div class="container d-flex justify-content-between align-items-center">
         <a class="navbar-brand fw-bold" href="{{ path('app_home') }}">MangaBlog</a>
 
         <div class="d-flex align-items-center gap-2">
             <a class="btn btn-outline-light btn-sm" href="{{ path('blog_index') }}">Blog</a>
+
             {% if app.user %}
-                <span class="navbar-text small me-2">Connecté en tant que {{ app.user.userIdentifier }}</span>
+                <span class="navbar-text small me-2">
+                    Connecté en tant que {{ app.user.userIdentifier }}
+                </span>
                 <a class="btn btn-outline-light btn-sm" href="{{ path('app_logout') }}">Se déconnecter</a>
+                <a href="{{ path('app_post_new') }}" class="btn btn-sm btn-warning ms-2">+ Créer un article</a>
+
+                <div class="btn-group ms-2">
+                    <a class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
+                        Back-office
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ path('app_post_index') }}">Articles</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_category_index') }}">Catégories</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_tag_index') }}">Tags</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_comment_index') }}">Commentaires</a></li>
+                    </ul>
+                </div>
             {% else %}
                 <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
                 <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
             {% endif %}
-            {% if app.user %}
-                <a href="{{ path('app_post_new') }}" class="btn btn-sm btn-warning ms-2">
-                    + Créer un article
-                </a>
-            {% endif %}
-
         </div>
     </div>
-    {% if app.user %}
-        <div class="btn-group me-2">
-            <a class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">
-                Back-office
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="{{ path('app_post_index') }}">Articles</a></li>
-                <li><a class="dropdown-item" href="{{ path('app_category_index') }}">Catégories</a></li>
-                <li><a class="dropdown-item" href="{{ path('app_tag_index') }}">Tags</a></li>
-                <li><a class="dropdown-item" href="{{ path('app_comment_index') }}">Commentaires</a></li>
-            </ul>
-        </div>
-    {% endif %}
-
 </nav>
 
-
-
-<main class="container py-4">
-    {# Zone pour afficher les messages flash (succès/erreur) #}
+{# Contenu principal — flex-grow-1 pousse le footer en bas si peu de contenu #}
+<main class="container py-4 flex-grow-1" role="main">
     {% for label, messages in app.flashes %}
         {% for message in messages %}
             <div class="alert alert-{{ label }} mb-3">{{ message }}</div>
         {% endfor %}
     {% endfor %}
 
-    {# Contenu spécifique à chaque page #}
     {% block body %}{% endblock %}
 </main>
 
-{# JS Bootstrap via CDN #}
+{# Footer collé en bas (mt-auto) + un peu d’air #}
+<footer class="border-top py-3 text-center text-muted small mt-auto">
+    © {{ 'now'|date('Y') }} MangaBlog — Symfony · Bootstrap
+</footer>
+
+{# Bootstrap JS #}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{# Crochet pour des scripts de pages #}
 {% block scripts %}{% endblock %}
 </body>
 </html>
