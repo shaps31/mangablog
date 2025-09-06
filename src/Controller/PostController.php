@@ -31,20 +31,20 @@ final class PostController extends AbstractController
         $form->handleRequest($request);                    // on lie la requête
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // 1) auteur = utilisateur connecté
+            // Associer l'auteur connecté
             $post->setAuthor($this->getUser());
 
-            // 2) slug auto si vide (tu peux aussi le saisir à la main dans le form)
+            // Générer un slug si le champ est vide
             if (!$post->getSlug()) {
                 $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle()), '-'));
                 $post->setSlug($slug);
             }
 
-            // 3) si publié sans date -> maintenant
+            // Si publié sans date -> maintenant (optionnel)
             if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
                 $post->setPublishedAt(new \DateTimeImmutable());
             }
-            dd($post->getTitle(), $post->getSlug(), $post->getStatus(), $post->getCategory());
+
 
             $em->persist($post);
             $em->flush();
@@ -107,4 +107,47 @@ final class PostController extends AbstractController
 
         return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
     }
+
+    #[Route('/post/export', name: 'app_post_export', methods: ['GET'])]
+    public function exportCsv(PostRepository $repo): StreamedResponse
+    {
+        // 📄 Nom du fichier exporté (ex: posts-20250906-153000.csv)
+        $filename = 'posts-'.(new \DateTimeImmutable())->format('Ymd-His').'.csv';
+
+        // ⏳ StreamedResponse = la réponse est envoyée petit à petit (flux),
+        // idéal pour générer un gros fichier CSV
+        $response = new StreamedResponse(function () use ($repo) {
+            // Ouverture du flux de sortie (php://output = directement la réponse HTTP)
+            $handle = fopen('php://output', 'w');
+
+            // (Optionnel) écrire le BOM UTF-8 pour qu’Excel gère bien les accents
+            // fwrite($handle, "\xEF\xBB\xBF");
+
+            // ✍️ Ligne d'en-tête du CSV (colonnes)
+            fputcsv($handle, ['id', 'title', 'slug', 'category', 'publishedAt', 'rating', 'author'], ';');
+
+            // 📊 On parcourt les articles publiés
+            foreach ($repo->findPublishedForExport() as $p) {
+                fputcsv($handle, [
+                    $p->getId(),                                  // id du post
+                    $p->getTitle(),                               // titre
+                    $p->getSlug(),                                // slug
+                    $p->getCategory()?->getName(),                // nom de la catégorie (si elle existe)
+                    $p->getPublishedAt()?->format('Y-m-d H:i'),   // date de publication
+                    $p->getRating(),                              // note
+                    $p->getAuthor()?->getUserIdentifier(),        // auteur (email ou username)
+                ], ';'); // séparateur = point-virgule
+            }
+
+            // Fermeture du flux
+            fclose($handle);
+        });
+
+        // 🔧 Configuration des en-têtes HTTP pour forcer le téléchargement
+        $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
+        $response->headers->set('Content-Disposition', 'attachment; filename="'.$filename.'"');
+
+        return $response;
+    }
+
 }
