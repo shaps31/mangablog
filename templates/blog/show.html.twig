@@ -1,6 +1,7 @@
 {# templates/blog/show.html.twig #}
 {% extends 'base.html.twig' %}
-{% block title %}{{ post.title }} · MangaBlog{% endblock %}
+{% block title %}{{ post.title }} — MangaBlog{% endblock %}
+
 
 {% block body %}
     <article class="bg-white p-4 border rounded mb-4">
@@ -8,13 +9,20 @@
         {% if post.cover %}
             <img src="{{ post.cover }}" class="img-fluid rounded mb-3" alt="Couverture" />
         {% endif %}
+
         {% if post.tags|length %}
-            <div class="mb-2">
+            <div class="mb-3">
                 {% for t in post.tags %}
-                    <span class="badge text-bg-secondary me-1">{{ t.name }}</span>
+                    <a
+                        class="badge bg-secondary text-decoration-none me-1"
+                        href="{{ path('blog_index', {'tag': t.id, 'page': 1}) }}"
+                    >
+                        {{ t.name }}
+                    </a>
                 {% endfor %}
             </div>
         {% endif %}
+
 
 
         <div class="text-muted small mb-3">
