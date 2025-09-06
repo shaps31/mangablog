@@ -10,3 +10,15 @@ Commits:
 - doc: corriger README (ajout du titre et des sections en français)
 
 Prochaine étape : Sprint 1 (Auth)
+
+## 2025-09-06 — Sprint 1
+- Génération User + LoginFormAuthenticator (/login)
+- Formulaire d’inscription (/register) avec hash du mot de passe
+- Navbar: liens Register/Login/Logout
+- Sécurité: access_control sur /admin, /post, /comment
+
+Commits:
+- ajout(auth): entité User et formulaire de connexion (/login)
+- ajout(auth): page d’inscription (/register) avec hash du mot de passe
+- ajout(ui): liens navbar Register/Login/Logout avec état connecté
+- tache(securite): protéger les préfixes /admin, /post, /comment
