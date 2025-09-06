@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
-use Symfony\Component\HttpFoundation\StreamedResponse;  
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 
 #[Route('/post')]
@@ -83,6 +83,26 @@ final class PostController extends AbstractController
             if (!$post->getSlug()) {
                 $post->setSlug(strtolower($slugger->slug($post->getTitle())));
             }
+            // Si le slug est vide (non défini par l’utilisateur)
+            if (!$post->getSlug()) {
+                // On génère un slug à partir du titre :
+                // 1. preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle())
+                //    → on remplace tout ce qui n’est pas lettre ou chiffre par un tiret "-"
+                // 2. trim(..., '-')
+                //    → on enlève les tirets au début/fin s’il y en a
+                // 3. strtolower(...)
+                //    → on met tout en minuscules
+                $slug = strtolower(
+                    trim(
+                        preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle()),
+                        '-'
+                    )
+                );
+
+                // On affecte ce slug automatiquement à l’article
+                $post->setSlug($slug);
+            }
+
 
             // Si on publie sans date -> maintenant
             if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
