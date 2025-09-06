@@ -14,21 +14,29 @@ final class BlogController extends AbstractController
     #[Route('/blog', name: 'blog_index')]
     public function index(Request $request, PostRepository $posts, CategoryRepository $categories): Response
     {
-        $q  = $request->query->get('q');                 // recherche texte
+        $q = $request->query->get('q');                 // recherche texte
         $catId = $request->query->getInt('category');    // filtre catégorie (id)
 
+        $start = (new \DateTimeImmutable('first day of this month 00:00:00'));
+        $end = (new \DateTimeImmutable('last day of this month 23:59:59'));
+
+        $totalMonth = $posts->countPublishedBetween($start, $end);
+        $totalsByCat = $posts->countByCategoryBetween($start, $end);
+
+
         $items = $posts->searchPublished($q, $catId);    // seulement les articles "published"
-        $cats  = $categories->findAll();
+        $cats = $categories->findAll();
 
         return $this->render('blog/index.html.twig', [
             'posts' => $items,
             'q' => $q,
             'catId' => $catId,
             'categories' => $cats,
+            'totalMonth' => $totalMonth,
+            'totalsByCat' => $totalsByCat,
         ]);
     }
-
-    #[Route('/blog/{slug}', name: 'blog_show')]
+        #[Route('/blog/{slug}', name: 'blog_show')]
     public function show(PostRepository $posts, string $slug): Response
     {
         $post = $posts->findOneBy(['slug' => $slug, 'status' => 'published']);
