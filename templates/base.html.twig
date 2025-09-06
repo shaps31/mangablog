@@ -23,6 +23,12 @@
                 <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
                 <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
             {% endif %}
+            {% if app.user %}
+                <a href="{{ path('app_post_new') }}" class="btn btn-sm btn-warning ms-2">
+                    + Créer un article
+                </a>
+            {% endif %}
+
         </div>
     </div>
     {% if app.user %}

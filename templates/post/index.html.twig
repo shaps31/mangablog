@@ -26,7 +26,11 @@
                 <td>{{ post.title }}</td>
                 <td>{{ post.slug }}</td>
                 <td>{{ post.content }}</td>
-                <td>{{ post.status }}</td>
+                <td>{% set cls = post.status == 'published' ? 'success' : 'secondary' %}
+                    <span class="badge text-bg-{{ cls }}">
+                    {{ post.status == 'published' ? 'Publié' : 'Brouillon' }}
+                    </span>
+                </td>
                 <td>{{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i:s') : '' }}</td>
                 <td>{{ post.cover }}</td>
                 <td>{{ post.rating }}</td>
