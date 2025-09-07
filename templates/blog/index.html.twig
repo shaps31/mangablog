@@ -3,6 +3,14 @@
 {% block title %}Blog{% endblock %}
 
 {% block body %}
+    {# Fil d’Ariane #}
+    {% include '_partials/_breadcrumb.html.twig' with {
+        items: [
+            { label: 'Accueil', url: path('app_home') },
+            { label: 'Blog' }
+        ]
+    } %}
+
     {# Variables sécurisées depuis l’URL si non passées par le contrôleur #}
     {% set q     = q|default(app.request.get('q')|default('')) %}
     {% set catId = catId|default(app.request.get('category')|default(0)) %}
@@ -77,14 +85,14 @@
         <div class="d-flex gap-2 flex-wrap">
             {% for row in totalsByCat|default([]) %}
                 <span class="badge text-bg-dark">
-          {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
-        </span>
+                    {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
+                </span>
             {% endfor %}
 
             {% if tag %}
                 <span class="badge text-bg-secondary ms-2">
-          tag : {{ (allTags|default([])|filter(t => t.id == tag)|first).name }}
-        </span>
+                    tag : {{ (allTags|default([])|filter(t => t.id == tag)|first).name }}
+                </span>
             {% endif %}
         </div>
     </div>
@@ -92,7 +100,7 @@
     {# En tendance (intégré DANS le block body) #}
     {% set trending = trending|default([]) %}
     {% if trending|length %}
-        <div class="card mb-3">
+        <div class="card shadow-sm h-100 reveal" data-animate="up">
             <div class="card-header fw-bold">En tendance</div>
             <ul class="list-group list-group-flush">
                 {% for p in trending %}
@@ -101,8 +109,8 @@
                             {{ p.title }}
                         </a>
                         <span class="badge text-bg-secondary">
-              {{ p.comments|filter(c => c.status == 'approved')|length }}
-            </span>
+                            {{ p.comments|filter(c => c.status == 'approved')|length }}
+                        </span>
                     </li>
                 {% endfor %}
             </ul>
@@ -116,7 +124,7 @@
     <div class="row row-cols-1 g-3">
         {% for post in posts %}
             <div class="col">
-                <div class="card shadow-sm h-100">
+                <div class="card shadow-sm h-100 reveal" data-animate="up">
                     <div class="card-body">
                         <h2 class="h5 card-title mb-1">
                             <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
@@ -171,8 +179,6 @@
                         {# Extrait propre (HTML nettoyé) #}
                         <p class="mb-2">
                             {{ post.content|striptags|u.truncate(220, '…') }}
-                            {# Si twig/string-extra n'est pas installé :
-                 {{ post.content|striptags|slice(0,220) }}{% if post.content|striptags|length > 220 %}…{% endif %} #}
                         </p>
 
                         <a class="btn btn-sm btn-outline-primary"

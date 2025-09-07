@@ -3,14 +3,19 @@
 {% block title %}{{ post.title }} — MangaBlog{% endblock %}
 
 {% block body %}
-    {# Fil d’Ariane #}
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ path('app_home') }}">Accueil</a></li>
-            <li class="breadcrumb-item"><a href="{{ path('blog_index') }}">Blog</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{{ post.title }}</li>
-        </ol>
-    </nav>
+    {# ✅ Fil d’Ariane via partial réutilisable #}
+    {% set crumbs = [
+        { label: 'Accueil', url: path('app_home') },
+        { label: 'Blog',    url: path('blog_index', app.request.query.all) }
+    ] %}
+    {% if post.category %}
+        {% set crumbs = crumbs|merge([{
+            label: post.category.name,
+            url: path('blog_index', app.request.query.all|merge({'category': post.category.id, 'page': 1}))
+        }]) %}
+    {% endif %}
+    {% set crumbs = crumbs|merge([{ label: post.title }]) %}
+    {% include '_partials/_breadcrumb.html.twig' with { items: crumbs } %}
 
     <article class="bg-white p-4 border rounded mb-4" itemscope itemtype="https://schema.org/Article">
         <header class="mb-3">
@@ -95,7 +100,7 @@
             {% for r in related %}
                 <div class="col">
                     <a class="text-decoration-none" href="{{ path('blog_show', { slug: r.slug }) }}">
-                        <div class="card h-100">
+                        <div class="card shadow-sm h-100 reveal" data-animate="up">
                             {% set rCover = r.cover ?: asset('img/cover-placeholder.png') %}
                             <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}" loading="lazy">
                             <div class="card-body">
