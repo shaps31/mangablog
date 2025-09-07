@@ -14,7 +14,7 @@
         <div class="row g-3">
             {% for post in latestSafe %}
                 <div class="col-md-4">
-                    <div class="card h-100">
+                    <div class="card shadow-sm h-100 reveal" data-animate="up">
                         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
                         <img src="{{ coverUrl }}" class="card-img-top" alt="">
                         <div class="card-body">

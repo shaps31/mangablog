@@ -9,7 +9,9 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
+#[UniqueEntity(fields: ['slug'], message: 'Ce slug est déjà utilisé.')]
 #[ORM\Entity(repositoryClass: PostRepository::class)]
 class Post
 {
@@ -23,7 +25,7 @@ class Post
     #[ORM\Column(length: 150)]
     private ?string $title = null;
 
-    #[ORM\Column(length: 160)]
+    #[ORM\Column(length: 160, unique: true)]
     private ?string $slug = null;
 
     #[Assert\NotBlank]
@@ -39,6 +41,7 @@ class Post
     private ?\DateTimeImmutable $publishedAt = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\Url(message: 'URL de couverture invalide.')]
     private ?string $cover = null;
 
     #[Assert\Range(min: 0, max: 10)]
@@ -130,9 +133,11 @@ class Post
         return $this->publishedAt;
     }
 
-    public function setPublishedAt(?\DateTimeImmutable $publishedAt): static
+    public function setPublishedAt(?\DateTimeInterface $publishedAt): self
     {
-        $this->publishedAt = $publishedAt;
+        $this->publishedAt = $publishedAt instanceof \DateTimeImmutable
+            ? $publishedAt
+            : ($publishedAt ? \DateTimeImmutable::createFromMutable($publishedAt) : null);
 
         return $this;
     }

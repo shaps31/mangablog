@@ -13,17 +13,39 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 
 #[Route('/post')]
 #[IsGranted('ROLE_ADMIN')]
 final class PostController extends AbstractController
 {
-    #[Route(name: 'app_post_index', methods: ['GET'])]
-    public function index(PostRepository $postRepository): Response
+    #[Route('/post', name: 'app_post_index', methods: ['GET'])]
+    public function index(Request $request, PostRepository $postRepository): Response
     {
+        $page     = max(1, (int) $request->query->get('page', 1));
+        $perPage  = max(5, min(50, (int) $request->query->get('size', 15)));
+
+        $qb = $postRepository->createQueryBuilder('p')
+            ->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC');
+
+        $total = (int) (clone $qb)->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
+
+        $posts = $qb
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage)
+            ->getQuery()
+            ->getResult();
+
+        $pages = max(1, (int) ceil($total / $perPage));
+
         return $this->render('post/index.html.twig', [
-            'posts' => $postRepository->findAll(),
+            'posts'   => $posts,
+            'page'    => $page,
+            'pages'   => $pages,
+            'total'   => $total,
+            'perPage' => $perPage,
         ]);
     }
 
@@ -35,6 +57,18 @@ final class PostController extends AbstractController
         $form->handleRequest($request);                    // on lie la requête
 
         if ($form->isSubmitted() && $form->isValid()) {
+            /** @var UploadedFile|null $uploaded */
+            $uploaded = $form->get('coverFile')->getData();
+            if ($uploaded) {
+                $filename = $this->handleCoverUpload(
+                    $uploaded,
+                    $this->getParameter('uploads_covers_dir') // config/services.yaml
+                );
+                if ($filename) {
+                    // Chemin public
+                    $post->setCover('/uploads/covers/'.$filename);
+                }
+            }
             // Associer l'auteur connecté
             $post->setAuthor($this->getUser());
 
@@ -78,6 +112,18 @@ final class PostController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            /** @var UploadedFile|null $uploaded */
+            $uploaded = $form->get('coverFile')->getData();
+            if ($uploaded) {
+                $filename = $this->handleCoverUpload(
+                    $uploaded,
+                    $this->getParameter('uploads_covers_dir') // config/services.yaml
+                );
+                if ($filename) {
+                    // Chemin public
+                    $post->setCover('/uploads/covers/'.$filename);
+                }
+            }
             // Associer l'auteur connecté
             $post->setAuthor($this->getUser());
             if ($post->getAuthor() !== $this->getUser() && ! $this->isGranted('ROLE_ADMIN')) {
@@ -180,6 +226,19 @@ final class PostController extends AbstractController
         $response->headers->set('Content-Disposition', 'attachment; filename="'.$filename.'"');
 
         return $response;
+    }
+
+    private function handleCoverUpload(?UploadedFile $file, string $targetDir): ?string
+    {
+        if (!$file) return null;
+
+        $original = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = $this->slugger->slug($original)->lower();
+        $ext = $file->guessExtension() ?: 'bin';
+        $filename = sprintf('%s-%s.%s', $safeName, uniqid('', true), $ext);
+
+        $file->move($targetDir, $filename);
+        return $filename; // on renverra ensuite "/uploads/covers/$filename"
     }
 
 }

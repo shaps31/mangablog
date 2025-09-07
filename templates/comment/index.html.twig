@@ -24,10 +24,11 @@
             </thead>
             <tbody>
             {% for comment in comments %}
+                {% set st = comment.status|default('pending') %}
                 <tr>
                     <td>{{ comment.id }}</td>
 
-                    <td class="text-truncate" style="max-width: 260px;">
+                    <td class="text-truncate" style="max-width:260px;">
                         {% if comment.post is defined and comment.post %}
                             <a href="{{ path('blog_show', { slug: comment.post.slug }) }}" class="text-decoration-none">
                                 {{ comment.post.title }}
@@ -41,8 +42,7 @@
                         {{ comment.author is defined and comment.author ? comment.author.userIdentifier : '—' }}
                     </td>
 
-                    <td class="text-truncate" style="max-width: 360px;">
-                        {# Extrait propre, sans HTML; fallback sans twig/string-extra #}
+                    <td class="text-truncate" style="max-width:360px;">
                         {% set raw = comment.content|default('')|striptags %}
                         {{ raw|slice(0,120) }}{% if raw|length > 120 %}…{% endif %}
                     </td>
@@ -52,7 +52,6 @@
                     </td>
 
                     <td>
-                        {% set st = comment.status|default('pending') %}
                         {% if st == 'approved' %}
                             <span class="badge text-bg-success">approuvé</span>
                         {% elseif st == 'rejected' %}
@@ -62,28 +61,27 @@
                         {% endif %}
                     </td>
 
+                    {# ✅ Actions #}
                     <td class="text-end">
-                        <a href="{{ path('app_comment_show', {'id': comment.id}) }}" class="btn btn-sm btn-outline-secondary">Voir</a>
-                        <a href="{{ path('app_comment_edit', {'id': comment.id}) }}" class="btn btn-sm btn-outline-primary">Éditer</a>
+                        <div class="text-nowrap">
+                            {# Voir/Éditer #}
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_comment_show', {id: comment.id}) }}">Voir</a>
+                            <a class="btn btn-sm btn-primary" href="{{ path('app_comment_edit', {id: comment.id}) }}">Éditer</a>
 
-                        {# Approuver (POST + CSRF) #}
-                        <form method="post"
-                              action="{{ path('app_comment_approve', {id: comment.id}) }}"
-                              class="d-inline">
-                            <input type="hidden" name="_token" value="{{ csrf_token('approve' ~ comment.id) }}">
-                            <button class="btn btn-sm btn-success" {% if st == 'approved' %}disabled{% endif %}>
-                                Approuver
-                            </button>
-                        </form>
+                            {# Toggle (approuver / annuler) — retourne sur la page courante #}
+                            <a class="btn btn-sm {{ st == 'approved' ? 'btn-outline-secondary' : 'btn-success' }}"
+                               href="{{ path('app_comment_toggle', {id: comment.id, back: app.request.uri}) }}">
+                                {{ st == 'approved' ? "Annuler l'approbation" : 'Approuver' }}
+                            </a>
 
-                        {# Supprimer / Rejeter (POST + CSRF) #}
-                        <form method="post"
-                              action="{{ path('app_comment_reject', {id: comment.id}) }}"
-                              class="d-inline"
-                              onsubmit="return confirm('Supprimer ce commentaire ?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token('reject' ~ comment.id) }}">
-                            <button class="btn btn-sm btn-outline-danger">Supprimer</button>
-                        </form>
+                            {# Supprimer — CSRF #}
+                            <form method="post" class="d-inline"
+                                  action="{{ path('app_comment_delete', {id: comment.id}) }}"
+                                  onsubmit="return confirm('Supprimer ce commentaire ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ comment.id) }}">
+                                <button class="btn btn-sm btn-outline-danger">Supprimer</button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             {% else %}

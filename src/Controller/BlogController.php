@@ -2,16 +2,16 @@
 
 namespace App\Controller;
 
+use App\Entity\Comment;
 use App\Repository\PostRepository;
 use App\Repository\CategoryRepository;
+use App\Repository\CommentRepository;
+use App\Repository\TagRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Repository\CommentRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use App\Entity\Comment;
-use App\Repository\TagRepository;
 
 final class BlogController extends AbstractController
 {
@@ -21,67 +21,71 @@ final class BlogController extends AbstractController
         PostRepository $posts,
         CategoryRepository $categories,
         TagRepository $tagRepository
+    ): Response {
+        // 🔎 Filtres depuis l’URL
+        $q     = trim((string) $request->query->get('q', ''));
+        $catId = (int) $request->query->get('category', 0) ?: null; // 0 => null (pas de filtre)
+        $tagId = (int) $request->query->get('tag', 0) ?: null;      // 0 => null (pas de filtre)
+        $page  = max(1, (int) $request->query->get('page', 1));
 
-    ): Response
-    {
-        // 🔍 Récupération des filtres depuis l’URL (GET)
-        $q      = $request->query->get('q', '');                 // texte recherché
-        $catId  = $request->query->getInt('category', 0);        // id de catégorie (0 = pas de filtre)
-        $tagId  = $request->query->getInt('tag', 0);             // id de tag (0 = pas de filtre)
-        $page   = max(1, $request->query->getInt('page', 1));    // numéro de page (≥ 1)
+        // 🔧 Nombre d’articles par page (cartes)
+        $perPage = 3;
 
-        // 📄 Recherche paginée des articles publiés avec filtres (q, catégorie, tag)
-        // ⚠️ Nécessite que ton PostRepository accepte $tagId.
-        // Signature attendue côté repo: searchPublishedPaginated(?string $q, ?int $categoryId, ?int $tagId, int $page, int $perPage = 5)
-        $pager = $posts->searchPublishedPaginated($q, $catId ?: null, $tagId ?: null, $page, 10);
+        // 📄 Recherche paginée (repo doit accepter le paramètre $tagId)
+        $pager = $posts->searchPublishedPaginated(
+            q: $q,
+            categoryId: $catId,
+            tagId: $tagId,
+            page: $page,
+            perPage: $perPage
+        );
 
-        $items = $pager['items']; // les articles de la page courante
-
-        // 📂 Données pour les filtres (liste complète)
+        // 📂 Données pour les filtres
         $allCategories = $categories->findAll();
         $allTags       = $tagRepository->findBy([], ['name' => 'ASC']);
 
-        // 📅 Statistiques du mois en cours (totaux globaux et par catégorie)
-        $start        = new \DateTimeImmutable('first day of this month 00:00:00');
-        $end          = new \DateTimeImmutable('last day of this month 23:59:59');
-        $totalMonth   = $posts->countPublishedBetween($start, $end);
-        $totalsByCat  = $posts->countByCategoryBetween($start, $end);
+        // 📅 Stats du mois
+        $start       = new \DateTimeImmutable('first day of this month 00:00:00');
+        $end         = new \DateTimeImmutable('last day of this month 23:59:59');
+        $totalMonth  = $posts->countPublishedBetween($start, $end);
+        $totalsByCat = $posts->countByCategoryBetween($start, $end);
 
-        // 🎨 Envoi au template
+        // 🎨 Rendu
         return $this->render('blog/index.html.twig', [
-            'posts'       => $items,          // articles de la page
-            'q'           => $q,              // valeur du champ recherche
-            'category'       => $catId,          // filtre catégorie sélectionné
-            'tag'         => $tagId,          // filtre tag sélectionné
-            'categories'  => $allCategories,  // toutes les catégories
-            'allTags'     => $allTags,        // tous les tags (triés par nom)
-            'totalMonth'  => $totalMonth,     // total du mois
-            'totalsByCat' => $totalsByCat,    // total par catégorie
-            // 🔄 Infos de pagination
-            'page'        => $pager['page'],
-            'pages'       => $pager['pages'],
-            'totalResults' => $pager['total'],
+            // liste + pagination
+            'posts'         => $pager['items'],
+            'totalResults'  => $pager['total'],
+            'page'          => $pager['page'],
+            'pages'         => $pager['pages'],
 
+            // filtres (pour formulaire + pastilles)
+            'q'             => $q,
+            'category'      => $catId,      // id de catégorie sélectionné (ou null)
+            'tag'           => $tagId,      // id de tag sélectionné (ou null)
+            'categories'    => $allCategories,
+            'allTags'       => $allTags,
 
-
+            // stats bandeau
+            'totalMonth'    => $totalMonth,
+            'totalsByCat'   => $totalsByCat,
         ]);
     }
 
-
-        #[Route('/blog/{slug}', name: 'blog_show', methods: ['GET', 'POST'])]
+    #[Route('/blog/{slug}', name: 'blog_show', methods: ['GET', 'POST'])]
     public function show(
-        Request                $request,
-        PostRepository         $posts,
-        CommentRepository      $commentsRepo,
+        Request $request,
+        PostRepository $posts,
+        CommentRepository $commentsRepo,
         EntityManagerInterface $em,
-        string                 $slug
-    ): Response
-    {
-        // 🔎 On récupère l’article publié correspondant au slug
+        string $slug
+    ): Response {
+        // 🔎 Article publié correspondant au slug
         $post = $posts->findOneBy(['slug' => $slug, 'status' => 'published']);
         if (!$post) {
             throw $this->createNotFoundException('Article introuvable');
         }
+
+        // 🔗 Articles liés (même catégorie, autres que l’actuel) — 3 max
         $related = array_filter(
             $posts->findBy(
                 ['category' => $post->getCategory(), 'status' => 'published'],
@@ -93,13 +97,13 @@ final class BlogController extends AbstractController
         $related = array_slice($related, 0, 3);
 
 
-        // 💬 On récupère les commentaires approuvés (status = approved)
+        // 💬 Commentaires approuvés
         $approved = $commentsRepo->findBy(
             ['post' => $post, 'status' => 'approved'],
             ['createdAt' => 'DESC']
         );
 
-        // 📝 Formulaire de commentaire (visible uniquement pour un utilisateur connecté)
+        // 📝 Formulaire commentaire (si connecté)
         $formView = null;
         if ($this->getUser()) {
             $comment = new Comment();
@@ -109,11 +113,10 @@ final class BlogController extends AbstractController
 
             $form->handleRequest($request);
             if ($form->isSubmitted() && $form->isValid()) {
-                // Associer le commentaire à l’article et à l’utilisateur
                 $comment->setPost($post);
                 $comment->setAuthor($this->getUser());
                 $comment->setCreatedAt(new \DateTimeImmutable());
-                $comment->setStatus('pending'); // pas publié tant que non validé
+                $comment->setStatus('pending');
 
                 $em->persist($comment);
                 $em->flush();
@@ -122,12 +125,26 @@ final class BlogController extends AbstractController
                 return $this->redirectToRoute('blog_show', ['slug' => $post->getSlug()]);
             }
             $formView = $form->createView();
-        }
+        }    $related = $posts->findRelated($post, 3);
+             $trending = $posts->createQueryBuilder('p')
+            ->leftJoin('p.comments', 'c')
+            ->andWhere('p.status = :s')->setParameter('s', 'published')
+            ->andWhere('(c.status IS NULL OR c.status = :approved)')
+            ->setParameter('approved', 'approved')
+            ->addSelect('COUNT(c.id) AS HIDDEN commentsCount')
+            ->groupBy('p.id')
+            ->orderBy('commentsCount', 'DESC')
+            ->addOrderBy('p.publishedAt', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()
+            ->getResult();
 
         return $this->render('blog/show.html.twig', [
             'post'     => $post,
             'comments' => $approved,
             'form'     => $formView,
+            'related'  => $related,
+            'trending' => $trending,
         ]);
     }
 }
