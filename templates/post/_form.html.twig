@@ -15,7 +15,6 @@
         }) }}
     </div>
 
-    {# 👉 le slug avec message d’aide et erreurs automatiques #}
     <div class="col-12">
         {{ form_row(form.slug, {
             help: 'Laisse vide pour être auto-généré depuis le titre.'
@@ -37,12 +36,11 @@
     </div>
 
     <div class="col-12">
-        {# ✅ Champ cover avec aide mise à jour #}
         {{ form_row(form.cover, {
             help: 'Colle une URL d’image (ex: https://exemple.com/cover.jpg)'
         }) }}
 
-        {# ✅ Aperçu visuel de la cover #}
+        {# Aperçu de la cover #}
         <div class="mt-2">
             <img id="coverPreview"
                  alt="Aperçu de l’image de couverture"
@@ -66,19 +64,26 @@
 
 {{ form_end(form) }}
 
-{# ✅ Petit JS local : montre/masque l’aperçu selon l’URL #}
-{% block scripts %}
-    {{ parent() }}
-    <script>
-        (function () {
-            const input = document.getElementById('post_cover');
-            const img   = document.getElementById('coverPreview');
+{# Script inline, robuste à Turbo et fallback par name #}
+<script>
+    (function () {
+        function initCoverPreview() {
+            // 1) Essaie via ID standard généré par Symfony (post_cover)
+            let input = document.getElementById('post_cover');
+
+            // 2) Fallback : cherche par name se terminant par [cover]
+            if (!input) {
+                const form = document.querySelector('form[name="post"]') || document.querySelector('form');
+                if (form) input = form.querySelector('input[name$="[cover]"]');
+            }
+
+            const img = document.getElementById('coverPreview');
             if (!input || !img) return;
 
             const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
 
             function update() {
-                const url = input.value.trim();
+                const url = (input.value || '').trim();
                 if (isHttpUrl(url)) {
                     img.src = url;
                     img.classList.remove('d-none');
@@ -91,6 +96,14 @@
             input.addEventListener('input', update);
             input.addEventListener('change', update);
             update(); // initial (utile en édition)
-        })();
-    </script>
-{% endblock %}
+        }
+
+        // Compatibilité Turbo + classique
+        document.addEventListener('turbo:load', initCoverPreview);
+        document.addEventListener('DOMContentLoaded', initCoverPreview);
+        // Si déjà chargé (navigations classiques)
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
+            initCoverPreview();
+        }
+    })();
+</script>
