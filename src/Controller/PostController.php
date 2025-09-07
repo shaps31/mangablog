@@ -12,9 +12,11 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 
 #[Route('/post')]
+#[IsGranted('ROLE_ADMIN')]
 final class PostController extends AbstractController
 {
     #[Route(name: 'app_post_index', methods: ['GET'])]

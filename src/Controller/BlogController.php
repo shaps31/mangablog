@@ -15,7 +15,7 @@ use App\Repository\TagRepository;
 
 final class BlogController extends AbstractController
 {
-    #[Route('/blog', name: 'blog_index')]
+    #[Route('/blog', name: 'blog_index', methods: ['GET'])]
     public function index(
         Request $request,
         PostRepository $posts,
@@ -82,6 +82,16 @@ final class BlogController extends AbstractController
         if (!$post) {
             throw $this->createNotFoundException('Article introuvable');
         }
+        $related = array_filter(
+            $posts->findBy(
+                ['category' => $post->getCategory(), 'status' => 'published'],
+                ['publishedAt' => 'DESC'],
+                4
+            ),
+            fn ($p) => $p->getId() !== $post->getId()
+        );
+        $related = array_slice($related, 0, 3);
+
 
         // 💬 On récupère les commentaires approuvés (status = approved)
         $approved = $commentsRepo->findBy(
