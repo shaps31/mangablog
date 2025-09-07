@@ -56,6 +56,11 @@
                             Back-office
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ path('admin_dashboard') }}">Dashboard</a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+
                             <li><a class="dropdown-item" href="{{ path('app_post_index') }}">Articles</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_category_index') }}">Catégories</a></li>
                             <li><a class="dropdown-item" href="{{ path('app_tag_index') }}">Tags</a></li>
