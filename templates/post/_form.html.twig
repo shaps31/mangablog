@@ -1,6 +1,7 @@
 {# templates/post/_form.html.twig #}
 {{ form_start(form) }}
 
+{# Erreurs globales du formulaire #}
 {% if form.vars.errors|length %}
     <div class="alert alert-danger mb-3">
         {{ form_errors(form) }}
@@ -9,11 +10,15 @@
 
 <div class="row g-3">
     <div class="col-12">
-        {{ form_row(form.title, { attr: { autofocus: true, placeholder: 'Titre de l’article' } }) }}
+        {{ form_row(form.title, {
+            attr: { autofocus: true, placeholder: 'Titre de l’article' }
+        }) }}
     </div>
 
     <div class="col-12">
-        {{ form_row(form.slug, { help: 'Laisse vide pour être auto-généré depuis le titre.' }) }}
+        {{ form_row(form.slug, {
+            help: 'Laisse vide pour être auto-généré depuis le titre.'
+        }) }}
     </div>
 
     <div class="col-12">
@@ -35,13 +40,19 @@
             help: 'Colle une URL d’image (ex: https://exemple.com/cover.jpg)'
         }) }}
 
-        {# ✅ Aperçu visuel de la cover #}
+        {# 👇 Une seule image d’aperçu, initialisée si possible #}
+        {% set cover = form.cover.vars.value|default('') %}
+        {% set valid = cover matches '/^https?:\\/\\//i' %}
+
         <div class="mt-2">
-            <img id="coverPreview"
-                 alt="Aperçu de l’image de couverture"
-                 class="img-thumbnail d-none"
-                 style="max-height:220px"
-                 loading="lazy">
+            <img
+                id="coverPreview"
+                alt="Aperçu de l’image de couverture"
+                class="img-thumbnail {{ valid ? '' : 'd-none' }}"
+                style="max-height:220px"
+                loading="lazy"
+                src="{{ valid ? cover : '' }}"
+            >
         </div>
     </div>
 
@@ -58,3 +69,79 @@
 </button>
 
 {{ form_end(form) }}
+
+{# Tom Select — recherche distante + création à la volée #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const el = document.getElementById('post_tags')
+            || document.querySelector('select[name="post[tags][]"]');
+        if (!el || el.tomselect) return;
+
+        const ts = new TomSelect(el, {
+            plugins: ['remove_button'],
+            valueField: 'id',    // ce que renvoie l'API
+            labelField: 'name',  // ce qu'on affiche
+            searchField: 'name',
+            persist: false,
+            // 🔎 Recherche distante (AJAX)
+            load: function (query, callback) {
+                if (!query.length) return callback();
+                fetch('{{ path("admin_tag_search") }}?q=' + encodeURIComponent(query))
+                    .then(r => r.json())
+                    .then(callback)
+                    .catch(() => callback());
+            },
+            // ➕ Autoriser la création à la volée
+            create: true, // taper "mecha" + Entrée => crée une option temporaire
+            createFilter: (input) => input.trim().length >= 2
+        });
+
+        // Quand on ajoute un “nouveau” tag (créé via create:true),
+        // on l’enregistre côté serveur, puis on remplace la valeur temporaire par l'id réel.
+        ts.on('item_add', function (value, item) {
+            // Si value n'est pas un nombre → c'est probablement un “nouveau” tag
+            if (isNaN(Number(value))) {
+                fetch('{{ path("admin_tag_create") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: value })
+                })
+                    .then(r => r.json())
+                    .then(tag => {
+                        if (!tag || !tag.id) return;
+                        // Remplacer l’option temporaire par le tag réel
+                        ts.updateOption(value, { id: tag.id, name: tag.name });
+                        ts.addItem(tag.id, true);   // sélectionner la vraie valeur
+                        ts.removeItem(value);       // retirer l’ancienne
+                    })
+                    .catch(() => {});
+            }
+        });
+    });
+</script>
+
+{# Aperçu dynamique de la cover (montre/masque selon l’URL) #}
+<script>
+    (function () {
+        const input = document.getElementById('post_cover');
+        const img   = document.getElementById('coverPreview');
+        if (!input || !img) return;
+
+        const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
+
+        function update() {
+            const url = (input.value || '').trim();
+            if (isHttpUrl(url)) {
+                img.src = url;
+                img.classList.remove('d-none');
+            } else {
+                img.classList.add('d-none');
+                img.removeAttribute('src');
+            }
+        }
+
+        input.addEventListener('input', update);
+        input.addEventListener('change', update);
+        update(); // initial (utile en édition)
+    })();
+</script>
