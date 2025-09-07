@@ -80,6 +80,10 @@ final class PostController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             // Associer l'auteur connecté
             $post->setAuthor($this->getUser());
+            if ($post->getAuthor() !== $this->getUser() && ! $this->isGranted('ROLE_ADMIN')) {
+                throw $this->createAccessDeniedException('Tu ne peux modifier que tes propres articles.');
+            }
+
 
             // Générer le slug si vide
             if (!$post->getSlug()) {
@@ -125,6 +129,10 @@ final class PostController extends AbstractController
     public function delete(Request $request, Post $post, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$post->getId(), $request->getPayload()->getString('_token'))) {
+            if ($post->getAuthor() !== $this->getUser() && ! $this->isGranted('ROLE_ADMIN')) {
+                throw $this->createAccessDeniedException('Tu ne peux modifier que tes propres articles.');
+            }
+
             $entityManager->remove($post);
             $entityManager->flush();
         }
