@@ -17,11 +17,24 @@ body{
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
-/* NAVBAR : dégradé doux + fine bordure basse */
-.navbar.bg-dark{
-    background: linear-gradient(180deg, rgba(255,87,34,.95), rgba(255,87,34,.88));
-    border-bottom: 1px solid rgba(0,0,0,.06);
+.badge.badge-cat {
+    background: color-mix(in srgb, var(--brand-alt) 12%, #fff);
+    color: color-mix(in srgb, var(--brand-alt) 80%, #000);
+    border: 1px solid color-mix(in srgb, var(--brand-alt) 30%, #000);
 }
+.badge.badge-cat:hover {
+    background: color-mix(in srgb, var(--brand-alt) 18%, #fff);
+    color: var(--brand-alt);
+    border-color: var(--brand-alt);
+}
+
+
+/* NAVBAR : dégradé doux + fine bordure basse */
+.navbar.bg-dark {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 94%, #fff), var(--brand));
+    border-bottom: 1px solid color-mix(in srgb, var(--brand) 60%, #000);
+}
+
 .navbar .navbar-brand,
 .navbar .navbar-text,
 .navbar .nav-link{ color:#fff; }
@@ -37,17 +50,25 @@ body{
     background: var(--brand-700);
     border-color: var(--brand-700);
 }
-.btn-read{
-    --c: var(--brand);
-    background: color-mix(in srgb, var(--c) 90%, white 10%);
+/* Bouton lecture plus doux */
+.btn-read {
+    background: color-mix(in srgb, var(--brand) 88%, #fff);
     border-color: transparent;
+    color: #fff;
     border-radius: 999px;
-    padding: .45rem .85rem;
+    padding: .35rem .9rem;
+    box-shadow: 0 6px 14px rgba(255, 87, 34, .18);
 }
-.btn-read:hover{
-    background: color-mix(in srgb, var(--c) 80%, white 20%);
-    box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--c) 25%, transparent);
+.btn-read:hover {
+    background: color-mix(in srgb, var(--brand) 80%, #fff);
+    box-shadow: 0 8px 18px rgba(255, 87, 34, .25);
+    transform: translateY(-1px);
 }
+.btn-read:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 35%, #fff);
+    outline-offset: 2px;
+}
+
 
 /* Cartes : look magazine (coins + ombre) + zoom cover au survol */
 .card{
@@ -61,15 +82,16 @@ body{
     transform: translateY(-3px);
     box-shadow: 0 14px 32px rgba(0,0,0,.12);
 }
-.card .img-cover{
+.card .img-cover, .card img{
     width:100%;
     height:220px;
     object-fit:cover;
     border-radius: 1rem 1rem 0 0;
     transition: transform .35s ease;
+    will-change: transform;
     transform-origin: center;
 }
-.card:hover .img-cover{ transform: scale(1.03); }
+.card:hover .img-cover, .card:hover img{ transform: scale(1.02); }
 
 /* Badges / tags : violet secondaire pour varier */
 .badge-tag,

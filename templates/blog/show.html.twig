@@ -56,13 +56,7 @@
 
         {# cover avec fallback + alt + lazy #}
         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-        <figure class="mb-3">
-            <img src="{{ coverUrl }}"
-                 class="img-fluid rounded"
-                 alt="Couverture : {{ post.title }}"
-                 loading="lazy"
-                 itemprop="image">
-        </figure>
+        <img src="{{ coverUrl }}" class="img-cover mb-2" alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
 
         {# contenu : on garde les retours à la ligne saisis dans l’admin #}
         <div class="content" style="white-space: pre-line;" itemprop="articleBody">
@@ -102,7 +96,7 @@
                     <a class="text-decoration-none" href="{{ path('blog_show', { slug: r.slug }) }}">
                         <div class="card shadow-sm h-100 reveal" data-animate="up">
                             {% set rCover = r.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}" loading="lazy">
+                            <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}" loading="lazy" decoding="async">
                             <div class="card-body">
                                 <div class="small text-muted mb-1">
                                     {{ r.category.name }} • {{ r.publishedAt ? r.publishedAt|date('Y-m-d') : '—' }}

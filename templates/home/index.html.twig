@@ -61,7 +61,7 @@
                     <div class="col">
                         <div class="card h-100">
                             {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy">
+                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy" decoding="async" width="1200" height="630">
                             <div class="card-body">
                                 <div class="small text-muted mb-1">
                                     {{ post.publishedAt ? post.publishedAt|date('d/m/Y') : '—' }} • {{ post.category ? post.category.name : '—' }}
@@ -91,7 +91,7 @@
                     <div class="col">
                         <div class="card h-100">
                             {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy">
+                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy" decoding="async" width="1200" height="630">
                             <div class="card-body">
                                 <div class="small text-muted mb-1">
                                     {{ post.publishedAt ? post.publishedAt|date('d/m/Y') : '—' }} • {{ post.category ? post.category.name : '—' }}
