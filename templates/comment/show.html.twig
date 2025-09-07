@@ -4,7 +4,7 @@
 {% block body %}
     <h1 class="h4 mb-3">Commentaire #{{ comment.id }}</h1>
 
-    <table class="table table-sm align-middle">
+    <table class="table table-sm align-middle bg-white border rounded">
         <tr>
             <th scope="row">ID</th>
             <td>{{ comment.id }}</td>
@@ -18,9 +18,7 @@
             <td>
                 {% if comment.post %}
                     <a href="{{ path('blog_show', { slug: comment.post.slug }) }}">{{ comment.post.title }}</a>
-                {% else %}
-                    —
-                {% endif %}
+                {% else %} — {% endif %}
             </td>
         </tr>
         <tr>
@@ -29,7 +27,16 @@
         </tr>
         <tr>
             <th scope="row">Statut</th>
-            <td>{{ comment.status ?? 'pending' }}</td>
+            <td>
+                {% set st = comment.status|default('pending') %}
+                {% if st == 'approved' %}
+                    <span class="badge text-bg-success">approuvé</span>
+                {% elseif st == 'rejected' %}
+                    <span class="badge text-bg-danger">rejeté</span>
+                {% else %}
+                    <span class="badge text-bg-warning text-dark">en attente</span>
+                {% endif %}
+            </td>
         </tr>
         <tr>
             <th scope="row">Contenu</th>
@@ -37,8 +44,21 @@
         </tr>
     </table>
 
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 mt-3">
         <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_comment_index') }}">↩︎ Retour</a>
         <a class="btn btn-primary btn-sm" href="{{ path('app_comment_edit', {id: comment.id}) }}">Éditer</a>
+
+        {# Approuver (POST + CSRF) #}
+        <form method="post"
+              action="{{ path('app_comment_approve', {id: comment.id}) }}"
+              class="d-inline">
+            <input type="hidden" name="_token" value="{{ csrf_token('approve' ~ comment.id) }}">
+            <button class="btn btn-success btn-sm" {% if comment.status == 'approved' %}disabled{% endif %}>
+                Approuver
+            </button>
+        </form>
+
+        {# Supprimer : on inclut le partial avec le bon contexte #}
+        {{ include('comment/_delete_form.html.twig', { comment: comment }) }}
     </div>
 {% endblock %}

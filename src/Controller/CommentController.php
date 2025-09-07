@@ -7,6 +7,7 @@ use App\Form\CommentType;
 use App\Repository\CommentRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -124,5 +125,22 @@ final class CommentController extends AbstractController
         $this->addFlash('success', 'Commentaire supprimé.');
 
         return $this->redirectToRoute('app_comment_index');
+    }
+
+    #[Route('/comment/{id}/toggle', name: 'app_comment_toggle', methods: ['GET'])]
+    public function toggle(Comment $comment, EntityManagerInterface $em): RedirectResponse
+    {
+        $comment->setStatus($comment->getStatus() === 'approved' ? 'pending' : 'approved');
+        $em->flush();
+
+        $this->addFlash('success', $comment->getStatus() === 'approved'
+            ? 'Commentaire approuvé.'
+            : 'Approbation annulée.'
+        );
+
+        return $this->redirect($request->query->get('back')
+            ?? $request->headers->get('referer')
+            ?? $this->generateUrl('app_comment_index'));
+
     }
 }

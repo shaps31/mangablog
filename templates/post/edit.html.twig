@@ -1,13 +1,53 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Edit Post{% endblock %}
+{% block title %}Modifier l’article{% endblock %}
 
 {% block body %}
-    <h1>Edit Post</h1>
+    <h1 class="mb-3">Modifier l’article</h1>
 
-    {{ include('post/_form.html.twig', {'button_label': 'Update'}) }}
+    {{ include('post/_form.html.twig', {'button_label': 'Mettre à jour'}) }}
 
-    <a href="{{ path('app_post_index') }}">back to list</a>
+    <div class="mt-3 d-flex gap-2">
+        <a class="btn btn-link" href="{{ path('app_post_index') }}">↩︎ Retour à la liste</a>
+        {# Optionnel: si tu as la variable "post" ici, affiche le lien vers la page publique #}
+        {# <a class="btn btn-outline-secondary btn-sm" href="{{ path('blog_show', {slug: post.slug}) }}">Voir l’article</a> #}
+    </div>
 
     {{ include('post/_delete_form.html.twig') }}
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script>
+        (function () {
+            function bindSlugAuto() {
+                const title = document.getElementById('post_title');
+                const slug  = document.getElementById('post_slug');
+                if (!title || !slug) return;
+
+                let userEditedSlug = false;
+                slug.addEventListener('input', function () { userEditedSlug = true; });
+
+                function slugify(str) {
+                    return str
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlève accents
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '-')   // tout sauf alphanum -> "-"
+                        .replace(/^-+|-+$/g, '');      // trim des "-"
+                }
+
+                title.addEventListener('input', function () {
+                    if (userEditedSlug && slug.value.trim() !== '') return;
+                    slug.value = slugify(title.value);
+                });
+            }
+
+            // Compatible rechargement normal + Turbo
+            document.addEventListener('DOMContentLoaded', bindSlugAuto);
+            document.addEventListener('turbo:load', bindSlugAuto);
+            if (document.readyState === 'interactive' || document.readyState === 'complete') {
+                bindSlugAuto();
+            }
+        })();
+    </script>
 {% endblock %}

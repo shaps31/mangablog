@@ -9,5 +9,6 @@
 
     <a href="{{ path('app_tag_index') }}">back to list</a>
 
-    {{ include('tag/_delete_form.html.twig') }}
+    {{ include('tag/_delete_form.html.twig', { tag: tag }) }}
+
 {% endblock %}

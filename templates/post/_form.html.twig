@@ -36,14 +36,19 @@
     </div>
 
     <div class="col-12">
+        {# ✅ URL de cover (une seule fois) #}
         {{ form_row(form.cover, {
             help: 'Colle une URL d’image (ex: https://exemple.com/cover.jpg)'
         }) }}
 
-        {# 👇 Une seule image d’aperçu, initialisée si possible #}
+        {# (Optionnel) Upload de fichier – n’affiche que si présent dans le FormType #}
+        {% if form.coverFile is defined %}
+            {{ form_row(form.coverFile, { help: 'Ou uploade une image (4 Mo max)' }) }}
+        {% endif %}
+
+        {# 👇 Prévisualisation (unique) ; initialisée si une URL valide existe #}
         {% set cover = form.cover.vars.value|default('') %}
         {% set valid = cover matches '/^https?:\\/\\//i' %}
-
         <div class="mt-2">
             <img
                 id="coverPreview"
@@ -51,7 +56,7 @@
                 class="img-thumbnail {{ valid ? '' : 'd-none' }}"
                 style="max-height:220px"
                 loading="lazy"
-                src="{{ valid ? cover : '' }}"
+                {% if valid %}src="{{ cover }}"{% endif %}
             >
         </div>
     </div>
@@ -79,11 +84,10 @@
 
         const ts = new TomSelect(el, {
             plugins: ['remove_button'],
-            valueField: 'id',    // ce que renvoie l'API
-            labelField: 'name',  // ce qu'on affiche
+            valueField: 'id',
+            labelField: 'name',
             searchField: 'name',
             persist: false,
-            // 🔎 Recherche distante (AJAX)
             load: function (query, callback) {
                 if (!query.length) return callback();
                 fetch('{{ path("admin_tag_search") }}?q=' + encodeURIComponent(query))
@@ -91,15 +95,11 @@
                     .then(callback)
                     .catch(() => callback());
             },
-            // ➕ Autoriser la création à la volée
-            create: true, // taper "mecha" + Entrée => crée une option temporaire
+            create: true,
             createFilter: (input) => input.trim().length >= 2
         });
 
-        // Quand on ajoute un “nouveau” tag (créé via create:true),
-        // on l’enregistre côté serveur, puis on remplace la valeur temporaire par l'id réel.
-        ts.on('item_add', function (value, item) {
-            // Si value n'est pas un nombre → c'est probablement un “nouveau” tag
+        ts.on('item_add', function (value) {
             if (isNaN(Number(value))) {
                 fetch('{{ path("admin_tag_create") }}', {
                     method: 'POST',
@@ -109,10 +109,9 @@
                     .then(r => r.json())
                     .then(tag => {
                         if (!tag || !tag.id) return;
-                        // Remplacer l’option temporaire par le tag réel
                         ts.updateOption(value, { id: tag.id, name: tag.name });
-                        ts.addItem(tag.id, true);   // sélectionner la vraie valeur
-                        ts.removeItem(value);       // retirer l’ancienne
+                        ts.addItem(tag.id, true);
+                        ts.removeItem(value);
                     })
                     .catch(() => {});
             }
@@ -120,28 +119,49 @@
     });
 </script>
 
-{# Aperçu dynamique de la cover (montre/masque selon l’URL) #}
+{# Aperçu dynamique de la cover (URL + fichier local) #}
 <script>
     (function () {
-        const input = document.getElementById('post_cover');
-        const img   = document.getElementById('coverPreview');
-        if (!input || !img) return;
+        const urlInput = document.getElementById('post_cover');
+        const fileInput = document.getElementById('post_coverFile');
+        const img = document.getElementById('coverPreview');
+        if (!img) return;
 
-        const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
-
-        function update() {
-            const url = (input.value || '').trim();
-            if (isHttpUrl(url)) {
-                img.src = url;
+        const show = (src) => {
+            if (src) {
+                img.src = src;
                 img.classList.remove('d-none');
             } else {
                 img.classList.add('d-none');
                 img.removeAttribute('src');
             }
+        };
+
+        const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
+
+        function updateFromUrl() {
+            if (!urlInput) return;
+            const url = (urlInput.value || '').trim();
+            show(isHttpUrl(url) ? url : '');
         }
 
-        input.addEventListener('input', update);
-        input.addEventListener('change', update);
-        update(); // initial (utile en édition)
+        function updateFromFile() {
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) return;
+            const file = fileInput.files[0];
+            if (!file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = (e) => show(e.target.result);
+            reader.readAsDataURL(file);
+        }
+
+        if (urlInput) {
+            urlInput.addEventListener('input', updateFromUrl);
+            urlInput.addEventListener('change', updateFromUrl);
+            updateFromUrl(); // init si édition
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', updateFromFile);
+        }
     })();
 </script>

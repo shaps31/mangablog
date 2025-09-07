@@ -6,9 +6,9 @@
 
     {{ include('comment/_form.html.twig', {'button_label': 'Mettre à jour'}) }}
 
-    <div class="mt-3">
+    <div class="mt-3 d-flex gap-2">
         <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_comment_index') }}">↩︎ Retour</a>
-        {{ include('comment/_delete_form.html.twig') }}
+        {# ⚠️ On passe bien "comment" au partial pour qu'il ait l'ID #}
+        {{ include('comment/_delete_form.html.twig', { comment: comment }) }}
     </div>
 {% endblock %}
-

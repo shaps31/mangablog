@@ -1,16 +1,18 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Post{% endblock %}
+{% block title %}Nouveau Post{% endblock %}
 
 {% block body %}
-    <h1>Create new Post</h1>
+    <h1>Créer un article</h1>
 
     {{ include('post/_form.html.twig') }}
 
-    <a href="{{ path('app_post_index') }}">back to list</a>
+    <a class="btn btn-link mt-3" href="{{ path('app_post_index') }}">↩︎ Retour à la liste</a>
 {% endblock %}
+
 {% block scripts %}
     <script>
+        // auto-slug depuis le titre (sans écraser si l’utilisateur tape lui-même le slug)
         document.addEventListener('DOMContentLoaded', function () {
             const title = document.getElementById('post_title');
             const slug  = document.getElementById('post_slug');
@@ -19,13 +21,17 @@
             let userEditedSlug = false;
             slug.addEventListener('input', function () { userEditedSlug = true; });
 
+            function slugify(str) {
+                return str
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+
             title.addEventListener('input', function () {
                 if (userEditedSlug && slug.value.trim() !== '') return;
-                // transforme "Mon Titre !" -> "mon-titre"
-                slug.value = title.value
-                    .toLowerCase()
-                    .replace(/[^a-z0-9]+/g, '-')   // tout ce qui n’est pas lettre/chiffre devient "-"
-                    .replace(/^-+|-+$/g, '');      // enlève les "-" au début/fin
+                slug.value = slugify(title.value);
             });
         });
     </script>

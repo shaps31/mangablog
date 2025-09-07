@@ -1,3 +1,6 @@
+# public/uploads/.gitignore
+*
+!.gitignore
 
 ###> symfony/framework-bundle ###
 /.env.local

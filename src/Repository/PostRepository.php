@@ -6,7 +6,6 @@ use App\Entity\Post;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
-
 /**
  * @extends ServiceEntityRepository<Post>
  */
@@ -18,97 +17,93 @@ class PostRepository extends ServiceEntityRepository
     }
 
     /**
-     * Recherche des articles publiés avec filtres optionnels.
+     * Recherche des articles publiés avec filtres optionnels (liste complète, non paginée).
      *
-     * @param string $q         Mot-clé pour chercher dans le titre ou le contenu (vide = pas de filtre)
-     * @param int    $categoryId Id de la catégorie à filtrer (0 = pas de filtre)
-     * @param int    $tagId      Id du tag à filtrer (0 = pas de filtre)
+     * @param string $q          Mot-clé (titre/contenu). Vide = pas de filtre
+     * @param int    $categoryId Id de catégorie. 0 = pas de filtre
+     * @param int    $tagId      Id de tag. 0 = pas de filtre
      *
-     * @return array Liste des articles trouvés
+     * @return Post[]
      */
     public function searchPublished(string $q = '', int $categoryId = 0, int $tagId = 0): array
     {
-        // On commence une requête sur Post (alias "p")
         $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c') // jointure pour récupérer la catégorie
-            ->leftJoin('p.tags', 't')->addSelect('t')     // jointure pour récupérer les tags
-            ->andWhere('p.status = :pub')                 // on ne garde que les articles publiés
-            ->setParameter('pub', 'published')
-            ->orderBy('p.publishedAt', 'DESC');           // tri : les plus récents d’abord
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->leftJoin('p.tags', 't')->addSelect('t')
+            ->andWhere('p.status = :pub')->setParameter('pub', 'published')
+            ->orderBy('p.publishedAt', 'DESC');
 
-        // Si on a un mot-clé, on cherche dans le titre ou le contenu
         if ($q !== '') {
+            // NOTE : la plupart des DB sont déjà case-insensitive avec LIKE.
             $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
-                ->setParameter('q', '%'.$q.'%'); // % = recherche "contient"
+                ->setParameter('q', '%'.$q.'%');
         }
 
-        // Si on a une catégorie précise, on filtre par son id
         if ($categoryId > 0) {
-            $qb->andWhere('c.id = :cid')
-                ->setParameter('cid', $categoryId);
+            $qb->andWhere('c.id = :cid')->setParameter('cid', $categoryId);
         }
 
-        // Si on a un tag précis, on filtre aussi par son id
         if ($tagId > 0) {
-            $qb->andWhere('t.id = :tid')
-                ->setParameter('tid', $tagId);
+            $qb->andWhere('t.id = :tid')->setParameter('tid', $tagId);
         }
 
-        // On exécute la requête et on renvoie la liste d’articles
         return $qb->getQuery()->getResult();
     }
 
-
-
-    // Compte le nombre total de posts publiés
-    // entre deux dates données ($from et $to).
+    /**
+     * Nombre d’articles publiés entre 2 dates.
+     */
     public function countPublishedBetween(\DateTimeInterface $from, \DateTimeInterface $to): int
     {
-        return (int) $this->createQueryBuilder('p')   // "p" = alias pour Post
-        ->select('COUNT(p.id)')                   // on veut juste le nombre de posts
-        ->where('p.status = :status')             // condition : seulement les "published"
-        ->andWhere('p.publishedAt BETWEEN :from AND :to') // condition : date de publication entre les 2 dates
-        ->setParameter('status', 'published')     // valeur du paramètre status
-        ->setParameter('from', $from)             // date début
-        ->setParameter('to', $to)                 // date fin
-        ->getQuery()                              // on génère la requête SQL
-        ->getSingleScalarResult();                // on récupère UN nombre (COUNT)
-    }
-
-    // Compte le nombre de posts publiés par catégorie
-    // entre deux dates données ($from et $to).
-    public function countByCategoryBetween(\DateTimeInterface $from, \DateTimeInterface $to): array
-    {
-        return $this->createQueryBuilder('p')          // "p" = Post
-        ->select('c.name AS category, COUNT(p.id) AS total') // on veut le nom de la catégorie + le nombre de posts
-        ->leftJoin('p.category', 'c')              // on relie Post à sa Category
-        ->where('p.status = :status')              // uniquement les "published"
-        ->andWhere('p.publishedAt BETWEEN :from AND :to') // publiés entre les 2 dates
-        ->setParameter('status', 'published')
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.status = :status')
+            ->andWhere('p.publishedAt BETWEEN :from AND :to')
+            ->setParameter('status', 'published')
             ->setParameter('from', $from)
             ->setParameter('to', $to)
-            ->groupBy('c.id')                          // on groupe par catégorie
-            ->orderBy('total', 'DESC')                 // on trie du + grand au + petit
             ->getQuery()
-            ->getArrayResult();                        // on récupère un tableau
+            ->getSingleScalarResult();
     }
 
     /**
-     * Recherche paginée des articles publiés avec filtres.
+     * Nombre d’articles publiés par catégorie entre 2 dates.
+     * @return array[] ex: [['category' => 'Actus', 'total' => 5], ...]
+     */
+    public function countByCategoryBetween(\DateTimeInterface $from, \DateTimeInterface $to): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select('c.name AS category, COUNT(p.id) AS total')
+            ->leftJoin('p.category', 'c')
+            ->where('p.status = :status')
+            ->andWhere('p.publishedAt BETWEEN :from AND :to')
+            ->setParameter('status', 'published')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->groupBy('c.id')
+            ->orderBy('total', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    /**
+     * Recherche **paginée** des articles publiés avec filtres.
      *
-     * @param string|null $q         Mot-clé (recherche dans titre ou contenu)
-     * @param int|null    $categoryId Id de la catégorie (null = pas de filtre)
-     * @param int|null    $tagId      Id du tag (null = pas de filtre)
-     * @param int         $page       Numéro de page (commence à 1)
-     * @param int         $perPage    Nombre d’articles par page (par défaut 5)
+     * @param string|null $q          Mot-clé (recherche titre/contenu)
+     * @param int|null    $categoryId Id de catégorie (null = pas de filtre)
+     * @param int|null    $tagId      Id de tag (null = pas de filtre)
+     * @param int         $page       Page courante (1..N)
+     * @param int         $perPage    Nombre d’articles par page
      *
      * @return array{
-     *   items: array,   // liste des articles de la page courante
-     *   total: int,     // nombre total d’articles trouvés
-     *   page: int,      // page actuelle
-     *   perPage: int    // combien d’articles par page
+     *   items: array,
+     *   total: int,
+     *   page: int,
+     *   perPage: int,
+     *   pages: int
      * }
      */
+    // src/Repository/PostRepository.php
     public function searchPublishedPaginated(
         ?string $q,
         ?int $categoryId,
@@ -116,77 +111,85 @@ class PostRepository extends ServiceEntityRepository
         int $page,
         int $perPage = 5
     ): array {
-        $baseQb = $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c')
-            ->leftJoin('p.tags', 't')->addSelect('t')
-            ->andWhere('p.status = :pub')->setParameter('pub', 'published');
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere('p.status = :published')
+            ->setParameter('published', 'published');
 
         if ($q) {
-            $baseQb->andWhere('p.title LIKE :q OR p.content LIKE :q')
-                ->setParameter('q', '%'.$q.'%');
+            $qb->andWhere('(LOWER(p.title) LIKE :q OR LOWER(p.content) LIKE :q)')
+                ->setParameter('q', '%'.mb_strtolower($q).'%');
         }
+
         if ($categoryId) {
-            $baseQb->andWhere('c.id = :cid')->setParameter('cid', $categoryId);
+            $qb->andWhere('p.category = :cid')->setParameter('cid', $categoryId);
         }
+
         if ($tagId) {
-            $baseQb->andWhere('t.id = :tid')->setParameter('tid', $tagId);
+            // JOIN uniquement pour filtrer, sans fetch-join ni addSelect()
+            $qb->join('p.tags', 't')->andWhere('t.id = :tid')->setParameter('tid', $tagId);
         }
 
-        // ---- total
-        $countQb = clone $baseQb;
-        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()
-            ->getSingleScalarResult();
+        // Ordre stable pour la pagination
+        $qb->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->distinct(); // très important quand il y a des JOIN
 
-        // ---- pagination
-        $perPage = max(1, $perPage);
-        $pages   = max(1, (int) ceil($total / $perPage));
-        $page    = max(1, min($page, $pages));
+        // Total AVANT pagination
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')->getQuery()->getSingleScalarResult();
 
-        $items = (clone $baseQb)
-            ->orderBy('p.publishedAt', 'DESC')
-            ->setFirstResult(($page - 1) * $perPage)
+        // Résultats paginés
+        $offset = max(0, ($page - 1) * $perPage);
+        $items = $qb->setFirstResult($offset)
             ->setMaxResults($perPage)
             ->getQuery()
             ->getResult();
 
         return [
-            'items'   => $items,
-            'total'   => $total,
-            'page'    => $page,
-            'perPage' => $perPage,
-            'pages'   => $pages,      // <<--- clé attendue par le contrôleur
+            'items' => $items,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => (int) ceil($total / $perPage),
         ];
     }
 
 
-
     /**
-     * Articles publiés pour l'export CSV.
+     * Articles publiés pour l’export (avec catégorie & auteur).
      *
-     * Cette méthode récupère tous les articles publiés,
-     * avec leur catégorie et leur auteur,
-     * pour préparer une exportation (ex: CSV ou Excel).
-     *
-     * @return array Liste d’objets Post avec relations chargées (catégorie + auteur)
+     * @return Post[]
      */
     public function findPublishedForExport(): array
     {
-        return $this->createQueryBuilder('p')          // on part de l’entité Post (alias "p")
-        ->leftJoin('p.category', 'c')->addSelect('c') // on ajoute la relation "category" (jointure)
-        ->leftJoin('p.author', 'a')->addSelect('a')   // on ajoute aussi la relation "author"
-        ->where('p.status = :st')                     // on ne prend que les articles publiés
-        ->setParameter('st', 'published')
-            ->orderBy('p.publishedAt', 'DESC')            // tri du plus récent au plus ancien
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->leftJoin('p.author', 'a')->addSelect('a')
+            ->where('p.status = :st')->setParameter('st', 'published')
+            ->orderBy('p.publishedAt', 'DESC')
             ->getQuery()
-            ->getResult();                                // on récupère tous les résultats
+            ->getResult();
     }
 
+    public function findRelated(Post $post, int $limit = 3): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere('p.status = :s')->setParameter('s', 'published')
+            ->andWhere('p != :post')->setParameter('post', $post)
+            ->setMaxResults($limit);
 
+        if ($post->getTags()->count() > 0) {
+            $qb->leftJoin('p.tags', 't')
+                ->andWhere('p.category = :cat OR t IN (:tags)')
+                ->setParameter('cat', $post->getCategory())
+                ->setParameter('tags', $post->getTags())
+                ->groupBy('p.id')
+                ->addOrderBy('COUNT(t)', 'DESC')
+                ->addOrderBy('p.publishedAt', 'DESC');
+        } else {
+            $qb->andWhere('p.category = :cat')->setParameter('cat', $post->getCategory())
+                ->orderBy('p.publishedAt', 'DESC');
+        }
 
-
-
-
-
+        return $qb->getQuery()->getResult();
+    }
 }

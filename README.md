@@ -1,16 +1,16 @@
-# MangaBlog
-
+# MangaBlog — Symfony
 Blog d’actus & critiques manga (Symfony 7, Bootstrap, SQLite).
 
-## Lancer le projet
-- `composer install`
-- `php -d opcache.enable_cli=0 bin/console doctrine:database:create`
-- `symfony server:start -d`
+Petit blog manga : articles, catégories, tags, commentaires avec modération, pagination, filtres…  
+**Back-office** léger + **Dashboard** (stats, mini-graphes) + **UX propre** (prévisualisation cover, Tom Select multi-tags, etc.).
 
-## Sprints
-- Sprint 0 : Bootstrap (layout + accueil) 
-- Sprint 1 : Auth (register/login, rôles, routes protégées)
-- Sprint 2 : Entités (Post, Category, Tag, Comment) + migrations
-- Sprint 3 : CRUD admin + validations
-- Sprint 4 : Liste publique + filtres + totaux
-- Sprint 5 : Dashboard + bonus (Chart.js, export CSV)
+## 🔧 Installation rapide
+
+```bash
+git clone <repo>
+cd mangablog
+composer install
+
+# Démarrer le serveur de dev
+symfony server:start -d
+# ou php -S 127.0.0.1:8001 -t public
