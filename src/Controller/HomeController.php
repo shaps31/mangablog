@@ -15,48 +15,47 @@ class HomeController extends AbstractController
     #[Route('/home', name: 'app_home_legacy')]
     public function index(PostRepository $posts, EntityManagerInterface $em): Response
     {
-        // 3 derniers en grand
+        // Derniers articles (exemple)
         $latest = $posts->createQueryBuilder('p')
             ->andWhere('p.status = :s')->setParameter('s', 'published')
             ->orderBy('p.publishedAt', 'DESC')
             ->setMaxResults(3)
-            ->getQuery()->getResult();
+            ->getQuery()
+            ->getResult();
 
-        // Catégories populaires (6) — nb d’articles publiés
+        // ✅ Catégories populaires (scalaires)
         $popularCategories = $em->createQuery(
-            'SELECT c AS category, COUNT(p.id) AS total
-             FROM App\Entity\Post p JOIN p.category c
-             WHERE p.status = :s
-             GROUP BY c.id ORDER BY total DESC'
-        )->setParameter('s','published')->setMaxResults(6)->getResult();
+            'SELECT c.id AS id, c.name AS name, c.slug AS slug, COUNT(p.id) AS total
+         FROM App\Entity\Post p
+         JOIN p.category c
+         WHERE p.status = :s
+         GROUP BY c.id, c.name, c.slug
+         ORDER BY total DESC'
+        )
+            ->setParameter('s', 'published')
+            ->setMaxResults(6)
+            ->getArrayResult();
 
-        // Tendances (6) — par nb de commentaires approuvés (puis date)
+        // Tendances (post + nombre de commentaires approuvés) — OK car on sélectionne l’entité racine p
         $trending = $em->createQuery(
             'SELECT p AS post, COUNT(c.id) AS comments
-             FROM App\Entity\Post p
-             LEFT JOIN p.comments c WITH c.status = :ok
-             WHERE p.status = :s
-             GROUP BY p.id
-             ORDER BY comments DESC, p.publishedAt DESC'
-        )->setParameter('ok','approved')
-            ->setParameter('s','published')
+         FROM App\Entity\Post p
+         LEFT JOIN p.comments c WITH c.status = :cs
+         WHERE p.status = :ps
+         GROUP BY p.id
+         ORDER BY comments DESC, p.publishedAt DESC'
+        )
+            ->setParameter('cs', 'approved')
+            ->setParameter('ps', 'published')
             ->setMaxResults(6)
             ->getResult();
 
-        // Tags populaires (20) — nb d’articles publiés
-        $topTags = $em->createQuery(
-            'SELECT t AS tag, COUNT(p.id) AS total
-             FROM App\Entity\Tag t JOIN t.posts p
-             WHERE p.status = :s
-             GROUP BY t.id ORDER BY total DESC'
-        )->setParameter('s','published')->setMaxResults(20)->getResult();
-
         return $this->render('home/index.html.twig', [
             'latest' => $latest,
-            'popularCategories' => $popularCategories,
-            'trending' => $trending,
-            'topTags' => $topTags,
+            'popularCategories' => $popularCategories, // scalaires
+            'trending' => $trending,          // post (entité) + comments (scalaire)
         ]);
+
     }
 
     #[Route('/home', name: 'home_redirect')]
