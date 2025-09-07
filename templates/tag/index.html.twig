@@ -1,18 +1,20 @@
 {% extends 'base.html.twig' %}
-
 {% block title %}Tag index{% endblock %}
 
 {% block body %}
-    <h1>Tag index</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 m-0">Tag index</h1>
+        <a class="btn btn-sm btn-primary" href="{{ path('app_tag_new') }}">+ Nouveau tag</a>
+    </div>
 
-    <table class="table">
+    <table class="table table-sm align-middle">
         <thead>
-            <tr>
-                <th>Id</th>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>actions</th>
-            </tr>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Slug</th>
+            <th class="text-end">actions</th>
+        </tr>
         </thead>
         <tbody>
         {% for tag in tags %}
@@ -20,18 +22,14 @@
                 <td>{{ tag.id }}</td>
                 <td>{{ tag.name }}</td>
                 <td>{{ tag.slug }}</td>
-                <td>
-                    <a href="{{ path('app_tag_show', {'id': tag.id}) }}">show</a>
-                    <a href="{{ path('app_tag_edit', {'id': tag.id}) }}">edit</a>
+                <td class="text-end">
+                    <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_tag_show', {'id': tag.id}) }}">show</a>
+                    <a class="btn btn-primary btn-sm" href="{{ path('app_tag_edit', {'id': tag.id}) }}">edit</a>
                 </td>
             </tr>
         {% else %}
-            <tr>
-                <td colspan="4">no records found</td>
-            </tr>
+            <tr><td colspan="4" class="text-muted">Aucun tag pour le moment.</td></tr>
         {% endfor %}
         </tbody>
     </table>
-
-    <a href="{{ path('app_tag_new') }}">Create new</a>
 {% endblock %}
