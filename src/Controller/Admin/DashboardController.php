@@ -3,46 +3,65 @@
 namespace App\Controller\Admin;
 
 use App\Repository\PostRepository;
-use App\Repository\CommentRepository;
-use App\Repository\CategoryRepository;
 use App\Repository\TagRepository;
+use App\Repository\CategoryRepository;
+use App\Repository\CommentRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/admin')]
 class DashboardController extends AbstractController
 {
-    #[Route('', name: 'admin_dashboard')]
+    #[Route('/admin', name: 'admin_dashboard')]
     public function index(
         PostRepository $posts,
-        CommentRepository $comments,
-        CategoryRepository $cats,
+        CategoryRepository $categories,
         TagRepository $tags,
+        CommentRepository $comments,
+        EntityManagerInterface $em
     ): Response {
-        $counts = [
-            'posts'     => $posts->count([]),
-            'categories'=> $cats->count([]),
-            'tags'      => $tags->count([]),
-            'comments'  => $comments->count([]),
-        ];
+        // Compteurs
+        $postCount     = $posts->count([]);
+        $categoryCount = $categories->count([]);
+        $tagCount      = $tags->count([]);
+        $commentCount  = $comments->count([]);
 
-        $pending = $comments->findBy(
+        // 5 derniers articles publiés
+        $latestPosts = $posts->createQueryBuilder('p')
+            ->andWhere('p.status = :s')->setParameter('s', 'published')
+            ->orderBy('p.publishedAt', 'DESC')
+            ->setMaxResults(5)
+            ->getQuery()->getResult();
+
+        // 5 commentaires "pending"
+        $pendingComments = $comments->findBy(
             ['status' => 'pending'],
             ['createdAt' => 'DESC'],
             5
         );
 
-        $publishedThisMonth = $posts->createQueryBuilder('p')
-            ->select('COUNT(p.id)')
-            ->andWhere('p.status = :pub')->setParameter('pub','published')
-            ->andWhere('p.publishedAt >= :start')->setParameter('start', new \DateTimeImmutable('first day of this month 00:00'))
-            ->getQuery()->getSingleScalarResult();
+        // Top 5 catégories (sur articles publiés)
+        $topCategories = $em->createQuery(
+            'SELECT c.name AS name, COUNT(p.id) AS total
+             FROM App\Entity\Post p
+             JOIN p.category c
+             WHERE p.status = :s
+             GROUP BY c.id, c.name
+             ORDER BY total DESC'
+        )
+            ->setParameter('s', 'published')
+            ->setMaxResults(5)
+            ->getResult();
 
         return $this->render('admin/dashboard.html.twig', [
-            'counts' => $counts,
-            'pending' => $pending,
-            'publishedThisMonth' => $publishedThisMonth,
+            'postCount'        => $postCount,
+            'categoryCount'    => $categoryCount,
+            'tagCount'         => $tagCount,
+            'commentCount'     => $commentCount,
+            'latestPosts'      => $latestPosts,
+            'pendingComments'  => $pendingComments,
+            'topCategories'    => $topCategories,
         ]);
     }
 }

@@ -39,6 +39,88 @@
     </div>
   </div>
 </div>
+    <div class="row mt-4">
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Derniers articles publiés</div>
+                <div class="card-body p-0">
+                    {% if latestPosts is empty %}
+                        <p class="m-3 text-muted">Aucun article publié encore.</p>
+                    {% else %}
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Catégorie</th>
+                                <th>Publié le</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for p in latestPosts %}
+                                <tr>
+                                    <td>{{ p.title }}</td>
+                                    <td>{{ p.category ? p.category.name : '—' }}</td>
+                                    <td>{{ p.publishedAt ? p.publishedAt|date('Y-m-d H:i') : '—' }}</td>
+                                    <td class="text-end">
+                                        <a class="btn btn-sm btn-outline-primary" href="{{ path('blog_show', {slug: p.slug}) }}">Voir</a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_post_edit', {id: p.id}) }}">Éditer</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Commentaires en attente</div>
+                <div class="card-body p-0">
+                    {% if pendingComments is empty %}
+                        <p class="m-3 text-muted">Aucun commentaire à modérer.</p>
+                    {% else %}
+                        <ul class="list-group list-group-flush">
+                            {% for c in pendingComments %}
+                                <li class="list-group-item d-flex justify-content-between align-items-start">
+                                    <div class="me-2">
+                                        <div class="fw-semibold">{{ c.author.userIdentifier }}</div>
+                                        <div class="small text-muted">
+                                            {{ c.createdAt|date('Y-m-d H:i') }}
+                                            — sur
+                                            <a href="{{ path('app_post_edit', {id: c.post.id}) }}">{{ c.post.title }}</a>
+                                        </div>
+                                        <div class="small" style="white-space: pre-line">{{ c.content|u.truncate(140, '…') }}</div>
+                                    </div>
+                                    <div class="text-nowrap ms-2">
+                                        <a class="btn btn-sm btn-success" href="{{ path('app_comment_toggle', {id: c.id}) }}">Approuver</a>
+                                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_comment_show', {id: c.id}) }}">Voir</a>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header fw-bold">Top catégories (par articles publiés)</div>
+        <div class="card-body">
+            {% if topCategories is empty %}
+                <p class="text-muted m-0">Pas encore de données.</p>
+            {% else %}
+                {% for row in topCategories %}
+                    <span class="badge text-bg-dark me-1 mb-1">
+          {{ row.name }} : {{ row.total }}
+        </span>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
 
 <div class="alert alert-secondary mt-3">
   <strong>{{ publishedThisMonth }}</strong> article(s) publiés ce mois-ci.
