@@ -19,11 +19,32 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_ADMIN')]
 final class PostController extends AbstractController
 {
-    #[Route(name: 'app_post_index', methods: ['GET'])]
-    public function index(PostRepository $postRepository): Response
+    #[Route('/post', name: 'app_post_index', methods: ['GET'])]
+    public function index(Request $request, PostRepository $postRepository): Response
     {
+        $page     = max(1, (int) $request->query->get('page', 1));
+        $perPage  = max(5, min(50, (int) $request->query->get('size', 15)));
+
+        $qb = $postRepository->createQueryBuilder('p')
+            ->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC');
+
+        $total = (int) (clone $qb)->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
+
+        $posts = $qb
+            ->setFirstResult(($page - 1) * $perPage)
+            ->setMaxResults($perPage)
+            ->getQuery()
+            ->getResult();
+
+        $pages = max(1, (int) ceil($total / $perPage));
+
         return $this->render('post/index.html.twig', [
-            'posts' => $postRepository->findAll(),
+            'posts'   => $posts,
+            'page'    => $page,
+            'pages'   => $pages,
+            'total'   => $total,
+            'perPage' => $perPage,
         ]);
     }
 
