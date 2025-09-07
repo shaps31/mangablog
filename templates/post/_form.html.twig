@@ -1,7 +1,6 @@
 {# templates/post/_form.html.twig #}
 {{ form_start(form) }}
 
-{# éventuelle erreur globale du formulaire #}
 {% if form.vars.errors|length %}
     <div class="alert alert-danger mb-3">
         {{ form_errors(form) }}
@@ -10,15 +9,11 @@
 
 <div class="row g-3">
     <div class="col-12">
-        {{ form_row(form.title, {
-            attr: { autofocus: true, placeholder: 'Titre de l’article' }
-        }) }}
+        {{ form_row(form.title, { attr: { autofocus: true, placeholder: 'Titre de l’article' } }) }}
     </div>
 
     <div class="col-12">
-        {{ form_row(form.slug, {
-            help: 'Laisse vide pour être auto-généré depuis le titre.'
-        }) }}
+        {{ form_row(form.slug, { help: 'Laisse vide pour être auto-généré depuis le titre.' }) }}
     </div>
 
     <div class="col-12">
@@ -40,7 +35,7 @@
             help: 'Colle une URL d’image (ex: https://exemple.com/cover.jpg)'
         }) }}
 
-        {# Aperçu de la cover #}
+        {# ✅ Aperçu visuel de la cover #}
         <div class="mt-2">
             <img id="coverPreview"
                  alt="Aperçu de l’image de couverture"
@@ -63,47 +58,3 @@
 </button>
 
 {{ form_end(form) }}
-
-{# Script inline, robuste à Turbo et fallback par name #}
-<script>
-    (function () {
-        function initCoverPreview() {
-            // 1) Essaie via ID standard généré par Symfony (post_cover)
-            let input = document.getElementById('post_cover');
-
-            // 2) Fallback : cherche par name se terminant par [cover]
-            if (!input) {
-                const form = document.querySelector('form[name="post"]') || document.querySelector('form');
-                if (form) input = form.querySelector('input[name$="[cover]"]');
-            }
-
-            const img = document.getElementById('coverPreview');
-            if (!input || !img) return;
-
-            const isHttpUrl = (u) => /^https?:\/\/.+/i.test(u);
-
-            function update() {
-                const url = (input.value || '').trim();
-                if (isHttpUrl(url)) {
-                    img.src = url;
-                    img.classList.remove('d-none');
-                } else {
-                    img.classList.add('d-none');
-                    img.removeAttribute('src');
-                }
-            }
-
-            input.addEventListener('input', update);
-            input.addEventListener('change', update);
-            update(); // initial (utile en édition)
-        }
-
-        // Compatibilité Turbo + classique
-        document.addEventListener('turbo:load', initCoverPreview);
-        document.addEventListener('DOMContentLoaded', initCoverPreview);
-        // Si déjà chargé (navigations classiques)
-        if (document.readyState === 'interactive' || document.readyState === 'complete') {
-            initCoverPreview();
-        }
-    })();
-</script>

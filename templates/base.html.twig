@@ -70,9 +70,21 @@
 <main class="container py-4 flex-grow-1" role="main">
     {% for label, messages in app.flashes %}
         {% for message in messages %}
-            <div class="alert alert-{{ label }} mb-3">{{ message }}</div>
+            <div class="alert alert-{{ label }} mb-3" role="alert">
+                {{ message }}
+            </div>
         {% endfor %}
     {% endfor %}
+
+    {% block scripts %}
+        {{ parent() }}
+        <script>
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(a => a.remove());
+            }, 4000);
+        </script>
+    {% endblock %}
+
 
     {% block body %}{% endblock %}
 </main>
@@ -83,6 +95,54 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        function setupCoverPreview() {
+            // On ne s’active que sur les formulaires Post
+            const form = document.querySelector('form[name="post"]');
+            if (!form) return;
+
+            // Sélection robuste du champ cover (id classique OU name suffixe)
+            const input = form.querySelector('#post_cover, input[name$="[cover]"]');
+            const img   = document.getElementById('coverPreview');
+            if (!input || !img) return;
+
+            // Évite de binder plusieurs fois si on revient sur la page
+            if (input.dataset.previewBound) {
+                // Met à jour au cas où la valeur initiale ait changé
+                update();
+                return;
+            }
+            input.dataset.previewBound = '1';
+
+            const isHttpUrl = (u) => /^https?:\/\//i.test(u);
+
+            function update() {
+                const url = (input.value || '').trim();
+                if (isHttpUrl(url)) {
+                    img.src = url;
+                    img.classList.remove('d-none');
+                } else {
+                    img.classList.add('d-none');
+                    img.removeAttribute('src');
+                }
+            }
+
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+            // Initial (utile en édition : valeur déjà présente)
+            update();
+        }
+
+        // Compatible rechargements classiques + navigations Turbo
+        document.addEventListener('DOMContentLoaded', setupCoverPreview);
+        document.addEventListener('turbo:load', setupCoverPreview);
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
+            setupCoverPreview();
+        }
+    })();
+</script>
+
 {% block scripts %}{% endblock %}
 </body>
 </html>
