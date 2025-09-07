@@ -1,44 +1,46 @@
 {# templates/admin/dashboard.html.twig #}
-    {% extends 'base.html.twig' %}
-    {% block title %}Dashboard{% endblock %}
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard{% endblock %}
 
 {% block body %}
-<h1 class="mb-3">Dashboard</h1>
+    <h1 class="mb-3">Dashboard</h1>
 
-<div class="row g-3">
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">Articles</div>
-        <div class="display-6">{{ counts.posts }}</div>
-      </div>
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-muted small">Articles</div>
+                    <div class="display-6">{{ counts.posts }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-muted small">Catégories</div>
+                    <div class="display-6">{{ counts.categories }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-muted small">Tags</div>
+                    <div class="display-6">{{ counts.tags }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-muted small">Commentaires</div>
+                    <div class="display-6">{{ counts.comments }}</div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">Catégories</div>
-        <div class="display-6">{{ counts.categories }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">Tags</div>
-        <div class="display-6">{{ counts.tags }}</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-md-3">
-    <div class="card text-center">
-      <div class="card-body">
-        <div class="text-muted small">Commentaires</div>
-        <div class="display-6">{{ counts.comments }}</div>
-      </div>
-    </div>
-  </div>
-</div>
+
     <div class="row mt-4">
         <div class="col-lg-6">
             <div class="card mb-3">
@@ -88,9 +90,8 @@
                                     <div class="me-2">
                                         <div class="fw-semibold">{{ c.author.userIdentifier }}</div>
                                         <div class="small text-muted">
-                                            {{ c.createdAt|date('Y-m-d H:i') }}
-                                            — sur
-                                            <a href="{{ path('app_post_edit', {id: c.post.id}) }}">{{ c.post.title }}</a>
+                                            {{ c.createdAt|date('Y-m-d H:i') }} —
+                                            sur <a href="{{ path('app_post_edit', {id: c.post.id}) }}">{{ c.post.title }}</a>
                                         </div>
                                         <div class="small" style="white-space: pre-line">{{ c.content|u.truncate(140, '…') }}</div>
                                     </div>
@@ -122,27 +123,7 @@
         </div>
     </div>
 
-<div class="alert alert-secondary mt-3">
-  <strong>{{ publishedThisMonth }}</strong> article(s) publiés ce mois-ci.
-</div>
-
-<h2 class="h5 mt-4">Commentaires en attente</h2>
-{% if pending is empty %}
-  <p class="text-muted">Aucun commentaire à modérer.</p>
-{% else %}
-  <div class="list-group">
-    {% for c in pending %}
-      <div class="list-group-item d-flex justify-content-between align-items-center">
-        <div>
-          <div class="small text-muted">{{ c.createdAt|date('Y-m-d H:i') }}</div>
-          <div>{{ c.content|u.truncate(120, '…') }}</div>
-        </div>
-        <div class="ms-3">
-          <a class="btn btn-sm btn-outline-primary" href="{{ path('app_comment_show', {id: c.id}) }}">Voir</a>
-          <a class="btn btn-sm btn-success" href="{{ path('app_comment_toggle', {id: c.id}) }}">Approuver</a>
-        </div>
-      </div>
-    {% endfor %}
-  </div>
-{% endif %}
+    <div class="alert alert-secondary mt-3">
+        <strong>{{ publishedThisMonth }}</strong> article(s) publié(s) ce mois-ci.
+    </div>
 {% endblock %}
