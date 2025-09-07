@@ -40,8 +40,11 @@ class Comment
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
-        $this->status = 'pending';
+        if ($this->status === null) {
+            $this->status = 'pending';
+        }
     }
+
 
 
     public function getId(): ?int
@@ -90,9 +93,13 @@ class Comment
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+
+
+    public function setCreatedAt(\DateTimeInterface $createdAt): self
     {
-        $this->createdAt = $createdAt;
+        $this->createdAt = $createdAt instanceof \DateTimeImmutable
+            ? $createdAt
+            : \DateTimeImmutable::createFromMutable($createdAt);
 
         return $this;
     }
