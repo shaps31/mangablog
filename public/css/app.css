@@ -1,186 +1,169 @@
+/* ========== Thème doux ========== */
 :root{
-    /* Palette */
-    --brand: #ff5722;         /* orange vif */
-    --brand-strong: #e65100;  /* plus sombre (bordures) */
-    --brand-light: #ff784e;   /* orange plus léger */
-    --brand-alt: #673ab7;     /* violet secondaire */
-    --brand-alt-light: #7c57d9;
-
-    --ink: #1f2937;           /* texte */
-    --muted: #6b7280;         /* gris secondaire */
-    --bg: #f8fafc;            /* fond doux */
-    --card: #ffffff;          /* cartes */
-
-    /* Dégradé navbar */
-    --brand-gradient: linear-gradient(90deg, #ff6a3b, #ff5722 55%, #e65100);
+    --brand: #ff5722;
+    --brand-600: #ff6a3d;       /* pour survols doux */
+    --brand-700: #e64a19;
+    --brand-alt: #6d5bd0;       /* violet secondaire, plus doux */
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --bg: #f8fafc;
+    --card: #ffffff;
 }
 
-/* Police lisible + titres impactants */
+/* Corps */
 body{
     background: var(--bg);
     color: var(--ink);
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
-}
-h1, h2, h3, .fw-bold{
-    font-family: 'Oswald', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif;
-    letter-spacing: .5px;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
-/* NAVBAR — écrase .bg-dark de Bootstrap */
+/* NAVBAR : dégradé doux + fine bordure basse */
 .navbar.bg-dark{
-    background-image: var(--brand-gradient) !important;
-    border-bottom: 3px solid var(--brand-strong);
-    box-shadow: 0 2px 0 rgba(0,0,0,.04);
+    background: linear-gradient(180deg, rgba(255,87,34,.95), rgba(255,87,34,.88));
+    border-bottom: 1px solid rgba(0,0,0,.06);
 }
-.navbar.bg-dark .navbar-brand,
-.navbar.bg-dark .navbar-text,
-.navbar.bg-dark .nav-link{
-    color:#fff;
-}
+.navbar .navbar-brand,
+.navbar .navbar-text,
+.navbar .nav-link{ color:#fff; }
+.navbar .btn-outline-light:hover{ background:#fff; color:var(--brand); }
 
-/* Boutons de navbar */
-.navbar.bg-dark .btn-outline-light{
-    border-color:#fff;
-}
-.navbar.bg-dark .btn-outline-light:hover{
-    background:#fff;
-    color: var(--brand);
-}
-
-/* Boutons généraux (arrondis doux) */
-.btn{ border-radius:.66rem; }
-.btn-sm{ border-radius:.6rem; }
-
-/* Primaire = orange de marque */
-.btn-primary{
+/* Boutons (dont 'Lire') : arrondi + couleur allégée */
+.btn, .page-link{ border-radius: .75rem; }
+.btn-primary, .btn-warning{
     background: var(--brand);
     border-color: var(--brand);
 }
-.btn-primary:hover{
-    background: var(--brand-strong);
-    border-color: var(--brand-strong);
+.btn-primary:hover, .btn-warning:hover{
+    background: var(--brand-700);
+    border-color: var(--brand-700);
+}
+.btn-read{
+    --c: var(--brand);
+    background: color-mix(in srgb, var(--c) 90%, white 10%);
+    border-color: transparent;
+    border-radius: 999px;
+    padding: .45rem .85rem;
+}
+.btn-read:hover{
+    background: color-mix(in srgb, var(--c) 80%, white 20%);
+    box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--c) 25%, transparent);
 }
 
-/* Outline primaire (liens/CTA secondaires) */
-.btn-outline-primary{
-    color: var(--brand);
-    border-color: var(--brand);
-}
-.btn-outline-primary:hover{
-    color:#fff;
-    background: var(--brand);
-    border-color: var(--brand);
-}
-
-/* Bouton “+ Créer un article” — garde la visibilité mais harmonisé */
-.btn.btn-warning{
-    background: var(--brand);
-    border-color: var(--brand);
-    color:#fff;
-}
-.btn.btn-warning:hover{
-    background: var(--brand-strong);
-    border-color: var(--brand-strong);
-}
-
-/* Cartes modernes */
+/* Cartes : look magazine (coins + ombre) + zoom cover au survol */
 .card{
-    border:0;
+    border: 0;
     background: var(--card);
-    border-radius: .75rem;
-    overflow: hidden; /* masque le zoom image */
-    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+    border-radius: 1rem;
+    box-shadow: 0 10px 24px rgba(0,0,0,.06);
     transition: transform .2s ease, box-shadow .2s ease;
 }
 .card:hover{
     transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+    box-shadow: 0 14px 32px rgba(0,0,0,.12);
 }
+.card .img-cover{
+    width:100%;
+    height:220px;
+    object-fit:cover;
+    border-radius: 1rem 1rem 0 0;
+    transition: transform .35s ease;
+    transform-origin: center;
+}
+.card:hover .img-cover{ transform: scale(1.03); }
 
-/* Images de carte : zoom léger au survol */
-.card .img-cover,
-.card .img-thumbnail{
-    transition: transform .3s ease;
-    border: 0; /* plus clean */
-    border-radius: .75rem .75rem 0 0;
-    object-fit: cover;
-}
-.card:hover .img-cover,
-.card:hover .img-thumbnail{
-    transform: scale(1.03);
-}
-
-/* Bouton “Lire” dans les cartes : plus doux */
-.card .btn-outline-primary{
-    border-radius: .66rem;
-    background: #fff6f2;         /* léger fond orangé */
-    color: var(--brand);
-    border-color: var(--brand);
-}
-.card .btn-outline-primary:hover{
-    background: var(--brand);
-    color:#fff;
-}
-
-/* Tags/chips : variété avec violet secondaire */
+/* Badges / tags : violet secondaire pour varier */
 .badge-tag,
 .badge.bg-secondary{
-    background: #ede7f6 !important;   /* lavande clair */
-    color: var(--brand-alt) !important;
-    border: 1px solid #d1c4e9 !important;
+    background: var(--bs-gray-100) !important;
+    color: var(--bs-gray-800) !important;
+    border: 1px solid var(--bs-gray-300) !important;
     border-radius: 999px;
-    font-weight: 500;
+    font-weight: 600;
 }
 .badge-tag:hover,
 .badge.bg-secondary:hover{
-    background: #e6def7 !important;
+    background: color-mix(in srgb, var(--brand-alt) 14%, white) !important;
     color: var(--brand-alt) !important;
-    border-color: var(--brand-alt-light) !important;
+    border-color: var(--brand-alt) !important;
     text-decoration: none;
 }
 
 /* Pagination */
-.pagination .page-link{ border-radius:.5rem; }
+.pagination .page-link{ border-radius:.6rem; }
 .pagination .page-item.active .page-link{
-    background: var(--brand);
-    border-color: var(--brand);
-    box-shadow: 0 0 0 .15rem rgba(255,87,34,.15);
+    background:var(--brand);
+    border-color:var(--brand);
+    box-shadow:0 0 0 .15rem rgba(255,87,34,.15);
 }
 
-/* Breadcrumb (fil d’Ariane) : liens violets */
+/* Fil d’Ariane */
 .breadcrumb{
-    --bs-breadcrumb-divider: '›';
-    font-size:.925rem;
-    background: transparent;
-    padding: 0;
-    margin-bottom: 1rem;
+    --bs-breadcrumb-divider:'›';
+    background:transparent;
+    padding:0;
+    margin-bottom:1rem;
+    font-size:.94rem;
 }
-.breadcrumb .breadcrumb-item a{
-    color: var(--brand-alt);
-    text-decoration: none;
-}
-.breadcrumb .breadcrumb-item a:hover{
-    color: var(--brand-alt-light);
-    text-decoration: underline;
-}
-.breadcrumb .breadcrumb-item.active{
-    color: #212529;
-    font-weight: 600;
+.breadcrumb .breadcrumb-item a{ color: var(--brand-alt); text-decoration: none; }
+.breadcrumb .breadcrumb-item a:hover{ text-decoration: underline; }
+.breadcrumb .breadcrumb-item.active{ color:#212529; font-weight:600; }
+
+/* Titres : Oswald ; texte : Inter */
+h1,h2,h3,.fw-bold{
+    font-family: 'Oswald', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Effet “reveal” (piloté par le JS déjà présent dans base.html.twig) */
-.reveal{
-    opacity:0; transform:translateY(12px);
-    transition:opacity .45s ease, transform .45s ease;
-}
+/* Reveal (déjà câblé en JS) */
+.reveal{ opacity:0; transform:translateY(12px); transition:opacity .45s ease, transform .45s ease; }
 .reveal.is-visible{ opacity:1; transform:none; }
 .reveal[data-animate="left"]{ transform:translateX(-18px); }
 .reveal[data-animate="right"]{ transform:translateX(18px); }
-.reveal[data-animate="fade"]{ transform:none; }
 
-/* Liens */
-a{ text-decoration:none; }
-a:hover{ text-decoration:underline; }
+/* Hero (page d’accueil) */
+.hero{
+    background:
+        radial-gradient(1200px 500px at 10% -10%, #ffe3d8 0%, transparent 60%),
+        radial-gradient(900px 600px at 90% -20%, #e9e5ff 0%, transparent 55%),
+        linear-gradient(180deg, #fff, #fff);
+    border: 1px solid rgba(0,0,0,.04);
+    border-radius: 1rem;
+}
 
-/* Divers */
-.img-cover{ object-fit: cover; }
+/* Nuage de tags */
+.tag-cloud a{
+    display:inline-block;
+    margin:.25rem;
+    padding:.35rem .7rem;
+    border-radius:999px;
+    font-weight:600;
+    font-size:.92rem;
+    background:#f3f1ff;
+    color:var(--brand-alt);
+    border:1px solid #e0dbff;
+}
+.tag-cloud a:hover{ background:#ebe7ff; text-decoration:none; }
+
+/* Catégories principales (cartes minces) */
+.cat-chip{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:1px solid rgba(0,0,0,.06);
+    background:#fff;
+    border-radius:.9rem;
+    padding:1rem;
+    height:100%;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+.cat-chip:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(0,0,0,.06);
+}
+
+@media (max-width: 992px){
+    .home-hero{ padding: 1.25rem 1rem !important; }
+    .home-hero .hero-illustration{
+        margin-top: 1rem;
+        max-width: 85%;
+    }
+}

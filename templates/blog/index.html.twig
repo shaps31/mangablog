@@ -137,11 +137,8 @@
 
                         {# ✅ Cover avec fallback, alt, lazy #}
                         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                        <img src="{{ coverUrl }}"
-                             class="img-thumbnail me-3"
-                             style="max-height:120px"
-                             alt="Couverture : {{ post.title }}"
-                             loading="lazy">
+                        <img src="{{ coverUrl }}" class="img-cover mb-2"  alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
+
 
                         <div class="text-muted small mb-2">
                             {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }} • {{ post.category.name }}
@@ -182,7 +179,8 @@
                         </p>
 
                         <a class="btn btn-sm btn-outline-primary"
-                           href="{{ path('blog_show', { slug: post.slug }) }}">Lire</a>
+                        <a class="btn btn-sm btn-read" href="{{ path('blog_show', { slug: post.slug }) }}">Lire</a>
+
                     </div>
                 </div>
             </div>
