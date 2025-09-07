@@ -6,12 +6,14 @@
 {% block body %}
     <h1 class="mb-3">Dashboard</h1>
 
+    {# Cartes de compteurs #}
     <div class="row g-3">
         <div class="col-md-3">
             <div class="card text-center">
                 <div class="card-body">
                     <div class="text-muted small">Articles</div>
                     <div class="display-6">{{ counts.posts }}</div>
+                    <a href="{{ path('app_post_index') }}" class="small">Gérer</a>
                 </div>
             </div>
         </div>
@@ -20,6 +22,7 @@
                 <div class="card-body">
                     <div class="text-muted small">Catégories</div>
                     <div class="display-6">{{ counts.categories }}</div>
+                    <a href="{{ path('app_category_index') }}" class="small">Gérer</a>
                 </div>
             </div>
         </div>
@@ -28,6 +31,7 @@
                 <div class="card-body">
                     <div class="text-muted small">Tags</div>
                     <div class="display-6">{{ counts.tags }}</div>
+                    <a href="{{ path('app_tag_index') }}" class="small">Gérer</a>
                 </div>
             </div>
         </div>
@@ -36,11 +40,13 @@
                 <div class="card-body">
                     <div class="text-muted small">Commentaires</div>
                     <div class="display-6">{{ counts.comments }}</div>
+                    <a href="{{ path('app_comment_index') }}" class="small">Gérer</a>
                 </div>
             </div>
         </div>
     </div>
 
+    {# Tableaux : derniers articles / commentaires en attente #}
     <div class="row mt-4">
         <div class="col-lg-6">
             <div class="card mb-3">
@@ -108,6 +114,27 @@
         </div>
     </div>
 
+    {# Graphiques #}
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Articles publiés par mois ({{ "now"|date("Y") }})</div>
+                <div class="card-body">
+                    <canvas id="postsByMonth"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header fw-bold">Top tags</div>
+                <div class="card-body">
+                    <canvas id="topTags"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Top catégories #}
     <div class="card">
         <div class="card-header fw-bold">Top catégories (par articles publiés)</div>
         <div class="card-body">
@@ -116,8 +143,8 @@
             {% else %}
                 {% for row in topCategories %}
                     <span class="badge text-bg-dark me-1 mb-1">
-          {{ row.name }} : {{ row.total }}
-        </span>
+            {{ row.name }} : {{ row.total }}
+          </span>
                 {% endfor %}
             {% endif %}
         </div>
@@ -126,4 +153,55 @@
     <div class="alert alert-secondary mt-3">
         <strong>{{ publishedThisMonth }}</strong> article(s) publié(s) ce mois-ci.
     </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    {# Chart.js #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script>
+        // Données injectées par le contrôleur
+        const perMonth = {{ perMonth|json_encode|raw }};
+        const topTags  = {{ topTags|json_encode|raw }};
+
+        // 1) Line chart — posts par mois
+        const ctxMonth = document.getElementById('postsByMonth');
+        if (ctxMonth) {
+            new Chart(ctxMonth, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Fév', 'Mars', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sept', 'Oct', 'Nov', 'Déc'],
+                    datasets: [{
+                        data: Object.values(perMonth),
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        // 2) Bar chart — top tags
+        const ctxTags = document.getElementById('topTags');
+        if (ctxTags) {
+            const tagLabels = topTags.map(t => t.name);
+            const tagCounts = topTags.map(t => t.c);
+
+            new Chart(ctxTags, {
+                type: 'bar',
+                data: {
+                    labels: tagLabels,
+                    datasets: [{ data: tagCounts }]
+                },
+                options: {
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+    </script>
 {% endblock %}
