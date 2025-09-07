@@ -14,34 +14,37 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/comment')]
 #[IsGranted('ROLE_ADMIN')]
-
 final class CommentController extends AbstractController
 {
     #[Route(name: 'app_comment_index', methods: ['GET'])]
     public function index(CommentRepository $commentRepository): Response
     {
+        // Tri du plus récent au plus ancien
+        $comments = $commentRepository->findBy([], ['createdAt' => 'DESC']);
+
         return $this->render('comment/index.html.twig', [
-            'comments' => $commentRepository->findAll(),
+            'comments' => $comments,
         ]);
     }
 
     #[Route('/new', name: 'app_comment_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $em): Response
     {
         $comment = new Comment();
         $form = $this->createForm(CommentType::class, $comment);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($comment);
-            $entityManager->flush();
+            $em->persist($comment);
+            $em->flush();
 
+            $this->addFlash('success', 'Commentaire créé.');
             return $this->redirectToRoute('app_comment_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('comment/new.html.twig', [
             'comment' => $comment,
-            'form' => $form,
+            'form'    => $form->createView(), // <- important
         ]);
     }
 
@@ -54,31 +57,72 @@ final class CommentController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_comment_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Comment $comment, EntityManagerInterface $entityManager): Response
+    public function edit(Request $request, Comment $comment, EntityManagerInterface $em): Response
     {
         $form = $this->createForm(CommentType::class, $comment);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $em->flush();
 
+            $this->addFlash('success', 'Commentaire mis à jour.');
             return $this->redirectToRoute('app_comment_index', [], Response::HTTP_SEE_OTHER);
         }
 
         return $this->render('comment/edit.html.twig', [
             'comment' => $comment,
-            'form' => $form,
+            'form'    => $form->createView(), // <- important
         ]);
     }
 
     #[Route('/{id}', name: 'app_comment_delete', methods: ['POST'])]
-    public function delete(Request $request, Comment $comment, EntityManagerInterface $entityManager): Response
+    public function delete(Request $request, Comment $comment, EntityManagerInterface $em): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$comment->getId(), $request->getPayload()->getString('_token'))) {
-            $entityManager->remove($comment);
-            $entityManager->flush();
+        $token = $request->request->getString('_token'); // récupère depuis <form> POST
+        if ($this->isCsrfTokenValid('delete' . $comment->getId(), $token)) {
+            $em->remove($comment);
+            $em->flush();
+            $this->addFlash('success', 'Commentaire supprimé.');
+        } else {
+            $this->addFlash('danger', 'Jeton CSRF invalide.');
         }
 
         return $this->redirectToRoute('app_comment_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/{id}/approve', name: 'app_comment_approve', methods: ['POST'])]
+    public function approve(Request $request, Comment $comment, EntityManagerInterface $em): Response
+    {
+        $token = $request->request->getString('_token');
+        if (!$this->isCsrfTokenValid('approve' . $comment->getId(), $token)) {
+            $this->addFlash('danger', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('app_comment_index');
+        }
+
+        if ($comment->getStatus() !== 'approved') {
+            $comment->setStatus('approved');
+            $em->flush();
+            $this->addFlash('success', 'Commentaire approuvé.');
+        } else {
+            $this->addFlash('info', 'Ce commentaire est déjà approuvé.');
+        }
+
+        return $this->redirectToRoute('app_comment_index');
+    }
+
+    #[Route('/{id}/reject', name: 'app_comment_reject', methods: ['POST'])]
+    public function reject(Request $request, Comment $comment, EntityManagerInterface $em): Response
+    {
+        $token = $request->request->getString('_token');
+        if (!$this->isCsrfTokenValid('reject' . $comment->getId(), $token)) {
+            $this->addFlash('danger', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('app_comment_index');
+        }
+
+        $em->remove($comment);
+        $em->flush();
+        $this->addFlash('success', 'Commentaire supprimé.');
+
+        return $this->redirectToRoute('app_comment_index');
     }
 }
