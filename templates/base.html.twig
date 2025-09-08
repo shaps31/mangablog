@@ -53,29 +53,22 @@
 
             {% if app.user %}
                 <div class="dropdown">
-                    {% set avat = app.user.avatarUrl %}
-                    {% set src = avat ? (avat starts with 'http' ? avat : asset(avat)) : null %}
-                    <button class="btn btn-navbar-user dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
-                        {% if src %}
-                            <img src="{{ src }}" class="avatar-sm" alt="Avatar">
-                        {% else %}
-                            <span class="avatar-sm avatar-fallback">{{ app.user.initials }}</span>
-                        {% endif %}
+                    <a class="btn btn-light btn-sm d-flex align-items-center gap-2"
+                       data-bs-toggle="dropdown" href="#" aria-expanded="false">
+                        <img src="{{ app.user.avatarOrGravatar }}" alt=""
+                             class="rounded-circle" width="28" height="28">
                         <span class="d-none d-md-inline">{{ app.user.displayName }}</span>
-                    </button>
+                    </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ path('app_profile_show') }}">Mon profil</a></li>
                         <li><a class="dropdown-item" href="{{ path('app_profile_edit') }}">Modifier</a></li>
-                        {% if is_granted('ROLE_ADMIN') %}
-                            <li><a class="dropdown-item" href="{{ path('admin_dashboard') }}">Back-office</a></li>
+                        {% if is_granted('ROLE_AUTHOR') %}
+                            <li><a class="dropdown-item" href="{{ path('app_post_new') }}">Écrire un article</a></li>
                         {% endif %}
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{{ path('app_logout') }}">Se déconnecter</a></li>
                     </ul>
                 </div>
-            {% else %}
-                <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
-                <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
             {% endif %}
 
 

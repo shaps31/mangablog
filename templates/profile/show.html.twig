@@ -1,3 +1,4 @@
+{# templates/profile/show.html.twig #}
 {% extends 'base.html.twig' %}
 {% block title %}Mon profil{% endblock %}
 
@@ -5,17 +6,17 @@
     <div class="row g-3">
         <div class="col-md-4">
             <div class="card p-3 text-center">
-                {% set avat = app.user.avatarUrl %}
-                {% set src = avat ? (avat starts with 'http' ? avat : asset(avat)) : null %}
-                {% if src %}
-                    <img src="{{ src }}" class="avatar-xxl mb-2" alt="Avatar">
-                {% else %}
-                    <div class="avatar-xxl avatar-fallback mb-2">{{ app.user.initials }}</div>
-                {% endif %}
+                <img
+                    src="{{ app.user.avatarOrGravatar }}"
+                    class="img-fluid rounded-4 shadow-sm"
+                    alt="Avatar">
 
-                <div class="fw-bold h5 mb-0">{{ app.user.displayName }}</div>
-                <div class="text-muted small">{{ app.user.userIdentifier }}</div>
-                {% if app.user.bio %}<p class="mt-2 mb-0">{{ app.user.bio }}</p>{% endif %}
+                <h2 class="h4 mt-3">{{ app.user.displayName }}</h2>
+                <p class="text-muted m-0">{{ app.user.userIdentifier }}</p>
+
+                {% if app.user.bio %}
+                    <p class="mt-2">{{ app.user.bio }}</p>
+                {% endif %}
 
                 <a href="{{ path('app_profile_edit') }}" class="btn btn-sm btn-primary mt-3">Modifier</a>
             </div>
@@ -25,9 +26,14 @@
             <div class="card p-3">
                 <h2 class="h5 fw-bold mb-3">Informations</h2>
                 <dl class="row mb-0">
-                    <dt class="col-4">Prénom</dt><dd class="col-8">{{ app.user.firstName ?? '—' }}</dd>
-                    <dt class="col-4">Nom</dt><dd class="col-8">{{ app.user.lastName ?? '—' }}</dd>
-                    <dt class="col-4">Email</dt><dd class="col-8">{{ app.user.userIdentifier }}</dd>
+                    <dt class="col-4">Prénom</dt>
+                    <dd class="col-8">{{ app.user.firstName ?? '—' }}</dd>
+
+                    <dt class="col-4">Nom</dt>
+                    <dd class="col-8">{{ app.user.lastName ?? '—' }}</dd>
+
+                    <dt class="col-4">Email</dt>
+                    <dd class="col-8">{{ app.user.userIdentifier }}</dd>
                 </dl>
             </div>
         </div>
