@@ -159,3 +159,105 @@ Badges & breadcrumbs en violet secondaire (brand-alt)
 Reveal CSS/JS (respecte prefers-reduced-motion)
 
 README mis à jour (installation, URLs, choix, limites)
+
+
+# Notes / backlog – MangaBlog
+
+## ✅ Fait
+- Hero page d’accueil : image = cover du dernier article publié, fallback `public/img/hero-cover.jpg`.
+- Sélecteur d’image hero dans Twig : évite la regex, test par `starts with 'http'`.
+- Section “Catégories populaires” sous forme de cartes (icône + compteur).
+- Section “En tendance 🔥” (carousel) basée sur nb de commentaires approuvés.
+- Blog index : badges plus lisibles, bouton “Lire” adouci, fil d’ariane.
+- Navbar : dégradé léger + fine bordure basse, hover propre.
+- Fix `CommentController::toggle()` : variable `$request` correctement injectée.
+
+## 🧩 À envisager (post-soutenance / améliorations)
+- Upload de cover (UX Dropzone) en plus de l’URL (garder l’URL comme fallback).
+- Carrousel d’images en accueil (Swiper/Bootstrap) pour “À découvrir”.
+- Nuage de tags plus visuel (tailles pondérées par fréquence).
+- Module newsletter (formulaire simple + stockage).
+- Accessibilité: contrastes, `aria-label`, focus visibles.
+- Tests fonctionnels minimes (homepage, blog list, ajout commentaire).
+
+## ℹ️ Tech/ops
+- Ne pas relancer `doctrine:fixtures:load` en prod (écrase le contenu).
+- Images: mettre le fallback dans `public/img/hero-cover.jpg`.
+- Chemins Twig : toujours relatifs à `/public` + `asset()`.
+- Déploiement prod: `composer install --no-dev --optimize-autoloader && bin/console cache:warmup`.
+
+✨ Nouvelles fonctionnalités
+
+Profil utilisateur : prénom, nom, bio, avatarUrl (URL absolue ou chemin relatif).
+Fallback automatique Gravatar si aucun avatar.
+
+Menu utilisateur : affiche displayName (prénom+nom sinon préfixe d’email) + accès rapide au profil.
+
+Page d’accueil : Hero immersif (cover dynamique avec fallback), cartes “Catégories populaires”.
+
+Section En tendance : carousel basé sur le volume de commentaires approuvés récents.
+
+Blog : cartes modernisées, badges tags cliquables, estimation temps de lecture.
+
+🛠 Corrections / Technique
+
+Comments : fix de l’Undefined $request dans l’action d’approbation.
+
+Robustesse affichage : compatibilité legacy avatar ↔ avatarUrl.
+
+Accessibilité & perf : lazy images, alt cohérents.
+
+🎨 UI/UX
+
+Navbar plus douce (bordure + hover), boutons “Lire” arrondis.
+
+Effet reveal on scroll (désactivé si prefers-reduced-motion).
+
+Breadcrumb propre.
+
+Upload avatar (fichier → /public/uploads/avatars, crop 256×256).
+
+Page “Mes articles” pour l’auteur connecté (pagination, actions).
+
+Accueil enrichi : section “À découvrir”.
+
+Implémentations légères, sans bundle lourd (OK pour un rendu d’examen), possibilité d’ajouter Symfony UX Dropzone plus tard pour le drag & drop.
+Fix : lien “Mes articles” dans le menu profil → utilise la route app_profile_app_my_posts (préfixe de nom de route du contrôleur).
+
+## 2025-09-06 — Branding & thème
+
+- Identité & logo
+    - Nouveau logo SVG “Otaku Eye × Enso × Kanji” (sparkle animée, lignes de vitesse, sceau 神).
+    - Partial Twig réutilisable: `templates/_partials/logo_mix.svg.twig`.
+    - Variables CSS pour la taille : `--logo-h` (header) / `--footer-logo-h` (footer).
+
+- Navbar & Header
+    - Dégradé `--nav-from` → `--nav-to`, logo en contraste (en blanc).
+    - Boutons pill Accueil/Blog (états filled/outline harmonisés).
+    - Zone utilisateur: avatar (gravatar/URL), `displayName`, dropdown (Profil, Modifier, Écrire, Logout).
+    - Ombre au scroll.
+
+- Thème CSS
+    - Palette: `--brand`, `--brand-600`, `--brand-700`, `--brand-alt`, `--ink`, `--muted`, `--bg`, `--card`.
+    - Hero: dégradé radial doux + bordure subtile.
+    - Cards: arrondis, ombres, zoom léger des covers au hover.
+    - Badges/tags “chips” lisibles (hover/cohérence couleurs).
+    - Fil d’Ariane léger (diviseur ›).
+    - Pagination arrondie, colorée.
+    - Tag cloud stylé.
+    - Avatars utilitaires (.avatar-sm, .avatar-xxl, fallback initiales).
+    - Micro-UX: reveal au scroll, transitions globales.
+
+- Footer
+    - Logo + wordmark, liens rapides, “Made with ❤️ by Shabadine”.
+    - Prévu pour `.footer-dark` (logo passe en blanc).
+
+- Utilitaires
+    - Autohide alertes.
+    - Preview dynamique de cover (URL http/https).
+    - Fonts: Oswald (titres), Inter (texte), Dancing Script (citations).
+
+> Où toucher quoi :
+> - Taille logo : `--logo-h`, `--footer-logo-h` (dans `app.css`).
+> - Couleur logo en header : `.navbar .brand-logo { --ink:#fff; --accent:#fff; }`.
+> - Couleurs du thème : `:root { --brand … }` dans `app.css`.
