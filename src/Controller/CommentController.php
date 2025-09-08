@@ -130,21 +130,31 @@ final class CommentController extends AbstractController
     #[Route('/admin/comment/{id}/toggle', name: 'app_comment_toggle', methods: ['POST'])]
     public function toggle(Comment $comment, Request $request, EntityManagerInterface $em): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
-
-        if (!$this->isCsrfTokenValid('comment_toggle'.$comment->getId(), $request->request->get('_token'))) {
-            throw $this->createAccessDeniedException('CSRF token invalide.');
+        $token = (string) $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('toggle'.$comment->getId(), $token)) {
+            if ($request->isXmlHttpRequest() || str_contains((string)$request->headers->get('Accept'), 'application/json')) {
+                return $this->json(['ok' => false, 'error' => 'invalid_csrf'], 400);
+            }
+            throw $this->createAccessDeniedException('Jeton CSRF invalide');
         }
 
-        $comment->setStatus($comment->getStatus() === 'approved' ? 'pending' : 'approved');
+        $new = $comment->getStatus() === 'approved' ? 'pending' : 'approved';
+        $comment->setStatus($new);
         $em->flush();
 
-        $this->addFlash('success', $comment->getStatus() === 'approved'
-            ? 'Commentaire approuvé.'
-            : 'Approbation annulée.'
-        );
+        // Réponse JSON si AJAX, sinon comportement normal (flash + redirect)
+        if ($request->isXmlHttpRequest() || str_contains((string)$request->headers->get('Accept'), 'application/json')) {
+            return $this->json([
+                'ok'        => true,
+                'newStatus' => $new,
+                'labels'    => [
+                    'btn'    => $new === 'approved' ? 'Annuler' : 'Approuver',
+                    'status' => $new === 'approved' ? 'approuvé' : 'en attente',
+                ]
+            ]);
+        }
 
-        $back = $request->request->get('back') ?: $request->headers->get('referer');
-        return $this->redirect($back ?: $this->generateUrl('app_comment_index'));
+        $this->addFlash('success', $new === 'approved' ? 'Commentaire approuvé.' : 'Approbation annulée.');
+        return $this->redirect($request->headers->get('referer') ?? $this->generateUrl('app_comment_index'));
     }
 }

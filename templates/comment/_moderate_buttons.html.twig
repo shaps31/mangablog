@@ -1,10 +1,22 @@
 {# templates/comment/_moderate_buttons.html.twig #}
-<form method="post" action="{{ path('app_comment_toggle', {id: comment.id}) }}" class="d-inline">
-    <input type="hidden" name="_token" value="{{ csrf_token('comment_toggle' ~ comment.id) }}">
-    <input type="hidden" name="back" value="{{ app.request.uri }}">
-    {% if comment.status == 'approved' %}
-        <button class="btn btn-sm btn-outline-secondary">Annuler l’approbation</button>
-    {% else %}
-        <button class="btn btn-sm btn-success">Approuver</button>
-    {% endif %}
-</form>
+{# Contexte requis: { comment } #}
+<div class="js-comment" data-id="{{ comment.id }}">
+    {# Badge statut (le JS mettra à jour la classe + le texte) #}
+    <span class="badge js-comment-status
+        {{ comment.status == 'approved' ? 'text-bg-success' : 'text-bg-warning text-dark' }}">
+    {{ comment.status == 'approved' ? 'approuvé' : 'en attente' }}
+  </span>
+
+    {# Formulaire POST (fallback), intercepté par le JS pour faire un fetch #}
+    <form method="post"
+          action="{{ path('app_comment_toggle', { id: comment.id }) }}"
+          class="d-inline js-comment-toggle"
+          data-id="{{ comment.id }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('toggle' ~ comment.id) }}">
+        <button type="submit"
+                class="btn btn-sm js-comment-btn
+              {{ comment.status == 'approved' ? 'btn-outline-secondary' : 'btn-success' }}">
+            {{ comment.status == 'approved' ? 'Annuler' : 'Approuver' }}
+        </button>
+    </form>
+</div>
