@@ -11,6 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use App\Repository\PostRepository;
 
 #[Route('/profil', name: 'app_profile_')]
 class ProfileController extends AbstractController
