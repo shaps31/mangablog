@@ -8,6 +8,14 @@
     --muted: #6b7280;
     --bg: #f8fafc;
     --card: #ffffff;
+
+    /* Navbar dégradé fort */
+    --nav-from: #ff6a3d; /* haut */
+    --nav-to:   #ff5722; /* bas */
+
+    /* Tailles logo contrôlées par variables */
+    --logo-h: 44px;        /* header */
+    --footer-logo-h: 44px; /* footer */
 }
 
 /* Corps */
@@ -17,15 +25,31 @@ body{
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
-/* NAVBAR : dégradé doux + fine bordure basse */
-.navbar.bg-dark{
-    background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 94%, #fff), var(--brand));
+/* NAVBAR : dégradé orange */
+.navbar{
+    background: linear-gradient(180deg, var(--nav-from), var(--nav-to));
     border-bottom: 1px solid rgba(0,0,0,.06);
 }
 .navbar .navbar-brand,
 .navbar .navbar-text,
 .navbar .nav-link{ color:#fff; }
-.navbar .btn-outline-light:hover{ background:#fff; color:var(--brand); }
+
+/* Boutons dans la navbar */
+.navbar .btn-outline-light{
+    border-color: rgba(255,255,255,.65);
+    color:#fff;
+}
+.navbar .btn-outline-light:hover{ background:#fff; color:var(--nav-to); }
+.navbar .btn-light{ color: var(--nav-to); border-color: transparent; }
+
+/* Logo dans la navbar
+   NOTE : on NE force PAS --ink/--accent ici -> le SVG garde ses couleurs */
+.navbar .brand-logo{
+    filter: drop-shadow(0 .5px 0 rgba(0,0,0,.22));
+    display:inline-flex; align-items:center;
+}
+.navbar .brand-logo svg{ height:var(--logo-h); width:auto; vertical-align:middle; }
+.navbar .navbar-brand .wordmark{ letter-spacing:.2px }
 
 /* Boutons */
 .btn, .page-link{ border-radius: .75rem; }
@@ -37,6 +61,7 @@ body{
     background: var(--brand-700);
     border-color: var(--brand-700);
 }
+
 /* Bouton lecture plus doux */
 .btn-read{
     background: color-mix(in srgb, var(--brand) 88%, #fff);
@@ -44,7 +69,7 @@ body{
     color:#fff;
     border-radius: 999px;
     padding:.35rem .9rem;
-    box-shadow:0 6px 14px rgba(255,87,34,.18);
+    box-shadow:0 10px 24px rgba(255,87,34,.22);
 }
 .btn-read:hover{
     background: color-mix(in srgb, var(--brand) 80%, #fff);
@@ -55,8 +80,9 @@ body{
     outline:3px solid color-mix(in srgb, var(--brand) 35%, #fff);
     outline-offset:2px;
 }
+.btn-read:active{ transform:translateY(0); box-shadow:0 6px 16px rgba(255,87,34,.2) }
 
-/* Cartes : look magazine + zoom cover */
+/* Cartes */
 .card{
     border:0;
     background:var(--card);
@@ -78,7 +104,7 @@ body{
 }
 .card:hover .img-cover, .card:hover img{ transform:scale(1.02); }
 
-/* Badges / tags – avec fallbacks Bootstrap */
+/* Badges / tags */
 .badge-tag,
 .badge.bg-secondary{
     background: var(--bs-gray-100, #f8f9fa) !important;
@@ -95,7 +121,7 @@ body{
     text-decoration:none;
 }
 
-/* Badge meta (si utilisé) */
+/* Badge meta */
 .badge.badge-cat{
     background: color-mix(in srgb, var(--brand-alt) 12%, #fff);
     color: color-mix(in srgb, var(--brand-alt) 80%, #000);
@@ -141,11 +167,10 @@ h1,h2,h3,.fw-bold{
 /* Hero */
 .hero{
     background:
-        radial-gradient(1200px 500px at 10% -10%, #ffe3d8 0%, transparent 60%),
-        radial-gradient(900px 600px at 90% -20%, #e9e5ff 0%, transparent 55%),
-        linear-gradient(180deg, #fff, #fff);
-    border:1px solid rgba(0,0,0,.04);
-    border-radius:1rem;
+        radial-gradient(1200px 520px at 12% -10%, #ffe3d8 0%, transparent 60%),
+        radial-gradient(860px 540px at 92% -18%, #eee9ff 0%, transparent 58%),
+        linear-gradient(180deg,#fff,#fff);
+    border:1px solid rgba(0,0,0,.04); border-radius:1rem;
 }
 
 /* Nuage de tags */
@@ -189,6 +214,35 @@ h1,h2,h3,.fw-bold{
     color:#444;
 }
 
+/* Table comments */
+.table-comments thead th{
+    position: sticky; top: 64px;   /* garde l’entête visible sous la navbar */
+    background:#fff; z-index: 1;
+    box-shadow: 0 1px 0 rgba(0,0,0,.06);
+}
+.table-comments tbody tr:hover{ background: #fff7f3; }
+
+
+
+/* Extrait tronqué propre */
+.td-excerpt{ max-width: 520px; }
+.truncate{
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Badges statut */
+.badge-dot::before{
+    content:""; display:inline-block; width:.45rem; height:.45rem; border-radius:50%;
+    margin-right:.4rem; background: currentColor;
+}
+.badge-approve{ background:#d1fae5; color:#065f46; }   /* approuvé */
+.badge-pending{ background:#fff3cd; color:#946200; }   /* en attente */
+.badge-reject{  background:#fee2e2; color:#991b1b; }   /* refusé (si tu l'as) */
+
+/* Boutons compacts */
+.btn-xxs{ padding:.15rem .45rem; font-size:.78rem; border-radius:999px; }
+
+
 .hero-media{
     width: 360px; height: 220px;
     border-radius: 16px;
@@ -196,18 +250,14 @@ h1,h2,h3,.fw-bold{
     background-position: center;
     box-shadow: 0 12px 30px rgba(0,0,0,.12);
 }
-.hero-img{ /* si tu gardes la balise <img> */
+.hero-img{
     width: 360px; height: 220px; object-fit: cover;
     border-radius: 16px; box-shadow: 0 12px 30px rgba(0,0,0,.12);
 }
 
 /* Avatar */
-.avatar-sm{
-    width:32px;height:32px;border-radius:50%;object-fit:cover;display:inline-block;
-}
-.avatar-xxl{
-    width:112px;height:112px;border-radius:50%;object-fit:cover;display:inline-block;
-}
+.avatar-sm{ width:32px;height:32px;border-radius:50%;object-fit:cover;display:inline-block; }
+.avatar-xxl{ width:112px;height:112px;border-radius:50%;object-fit:cover;display:inline-block; }
 .avatar-fallback{
     display:inline-flex;align-items:center;justify-content:center;
     background:#ffe4d9;color:#b5481b;font-weight:700;
@@ -222,12 +272,69 @@ h1,h2,h3,.fw-bold{
 }
 .btn-navbar-user:hover{ background: rgba(255,255,255,.25); color:#fff; }
 
-/* Petites cartes catégories (déjà en place) – ombre douce */
+/* boutons nav arrondis, cohérents */
+.btn-nav{
+    border-radius:999px; padding:.35rem .8rem;
+    border:1px solid rgba(255,255,255,.55);
+    background:rgba(255,255,255,.12); color:#fff;
+}
+.btn-nav:hover{ background:#fff; color:var(--nav-to); border-color:transparent }
+.btn-nav.active{ background:#fff; color:var(--nav-to); border-color:transparent }
+
+/* Ombre de navbar quand on scrolle */
+.scrolled .navbar{ box-shadow:0 10px 24px rgba(0,0,0,.12) }
+
+/* Petites cartes catégories – ombre douce */
 .cat-card{ border-radius:16px; }
 
+/* --- Footer --- */
+.site-footer{
+    background: linear-gradient(180deg, #fff, #f6f7fb);
+    border-top: 1px solid rgba(0,0,0,.06);
+}
+.site-footer .brand{ color:var(--ink); }
+.site-footer .footer-logo svg{ height:var(--footer-logo-h); width:auto; vertical-align:middle; }
+.site-footer .links a{
+    color: var(--muted); text-decoration: none; font-weight: 600;
+}
+.site-footer .links a:hover{ color: var(--brand-alt); text-decoration: underline; }
+.site-footer .links .dot{ color: rgba(0,0,0,.25); }
+.site-footer .made{ opacity:.85; }
+
+/* Variante sombre */
+.footer-dark{
+    background:#0f1115; color:#fff; border-top-color:rgba(255,255,255,.08);
+}
+.footer-dark .links a{ color: rgba(255,255,255,.85); }
+.footer-dark .links a:hover{ color:#fff; text-decoration: underline; }
+.footer-dark .links .dot{ color: rgba(255,255,255,.35); }
+.footer-dark .footer-logo{ --ink:#fff; --accent:#fff; } /* logo auto en blanc */
+
+/* Animation sparkle sur le logo */
+.brand-logo .sparkle{ transform-origin:center; }
+.brand-logo:hover .sparkle{ animation:twinkle .9s ease-in-out }
+@keyframes twinkle{ 0%{transform:scale(1)} 50%{transform:scale(1.35) rotate(20deg)} 100%{transform:scale(1)} }
 
 /* Responsive */
 @media (max-width: 992px){
     .home-hero{ padding:1.25rem 1rem !important; }
     .home-hero .hero-illustration{ margin-top:1rem; max-width:85%; }
+}
+@media (max-width: 576px){
+    .navbar .navbar-brand .wordmark{ display:none } /* icône seule sur très petit écran */
+    .hero .display-4, .hero h1{ font-size:clamp(1.6rem, 4vw + 1rem, 2.2rem) }
+}
+
+/* HiDPI : ombre du logo plus fine (après la règle de base) */
+@media (min-resolution: 120dpi), (min-resolution: 1.25dppx), (-webkit-min-device-pixel-ratio: 1.25){
+    .navbar .brand-logo{ filter: drop-shadow(0 0.5px 0 rgba(0,0,0,.21)); }
+}
+@media (min-resolution: 144dpi), (min-resolution: 1.5dppx), (-webkit-min-device-pixel-ratio: 1.5){
+    .navbar .brand-logo{ filter: drop-shadow(0 0.4px 0 rgba(0,0,0,.20)); }
+}
+@media (min-resolution: 192dpi), (min-resolution: 2dppx), (-webkit-min-device-pixel-ratio: 2){
+    .navbar .brand-logo{ filter: drop-shadow(0 0.35px 0 rgba(0,0,0,.18)); }
+}
+@media (min-resolution: 264dpi), (min-resolution: 2.75dppx), (-webkit-min-device-pixel-ratio: 2.75){
+    .navbar .brand-logo{ filter: drop-shadow(0 0.25px 0 rgba(0,0,0,.16)); }
 }
