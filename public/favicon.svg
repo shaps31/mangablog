@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"
+     role="img" aria-label="KamiManga Enso Kami"
+     style="--ink:#4B2E83; --accent:#F26A21; height:44px; width:auto">
+    <defs>
+        <style>
+            .s{stroke:var(--ink); stroke-width:8; stroke-linecap:round; stroke-linejoin:round; fill:none}
+            .t{font:900 34px/1 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,"Noto Sans JP",sans-serif; fill:var(--ink)}
+            .a{stroke:var(--accent); stroke-width:8; fill:none; stroke-linecap:round}
+        </style>
+    </defs>
+
+    <!-- Cercle enso (coup de pinceau, ouverture) -->
+    <path d="M24 60a36 36 0 1 0 17-31" class="s"/>
+    <!-- petit trait d'accent -->
+    <path d="M92 20c6 2 12 6 16 10" class="a"/>
+
+    <!-- Kanji '神' (Kami) -->
+    <text x="60" y="73" text-anchor="middle" class="t">神</text>
+</svg>
