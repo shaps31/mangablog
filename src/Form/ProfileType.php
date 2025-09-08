@@ -9,7 +9,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Validator\Constraints\File;
+use Symfony\Component\Validator\Constraints as Assert;
 
 class ProfileType extends AbstractType
 {
@@ -34,7 +34,7 @@ class ProfileType extends AbstractType
             ->add('avatarFile', FileType::class, [
                 'mapped' => false, 'required' => false, 'label' => 'Avatar (fichier)',
                 'constraints' => [
-                    new File([
+                    new Assert\File([
                         'maxSize' => '3M',
                         'mimeTypes' => ['image/png', 'image/jpeg', 'image/webp', 'image/gif'],
                         'mimeTypesMessage' => 'Formats acceptés: PNG, JPG, WEBP, GIF (<=3 Mo).',

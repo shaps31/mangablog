@@ -3,13 +3,14 @@
 namespace App\Controller;
 
 use App\Form\ProfileType;
-use Doctrine\ORM\EntityManagerInterface as EM;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 #[Route('/profil', name: 'app_profile_')]
 class ProfileController extends AbstractController
@@ -23,43 +24,38 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/edition', name: 'edit', methods: ['GET','POST'])]
-    public function edit(Request $request, EM $em, SluggerInterface $slugger): Response
+    public function edit(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
     {
-        $this->denyAccessUnlessGranted('ROLE_USER');
-        /** @var \App\Entity\User $user */
         $user = $this->getUser();
-
         $form = $this->createForm(ProfileType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
-            // 1) Upload fichier si présent
+            /** @var UploadedFile|null $file */
             $file = $form->get('avatarFile')->getData();
             if ($file) {
-                $orig = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $safe = $slugger->slug($orig)->lower();
-                $ext  = $file->guessExtension() ?: 'bin';
-                $name = sprintf('%s-%s.%s', $safe, bin2hex(random_bytes(4)), $ext);
+                $uploadsDir = $this->getParameter('kernel.project_dir').'/public/uploads/avatars';
+                @mkdir($uploadsDir, 0775, true);
 
-                $targetDir = $this->getParameter('uploads_avatars_dir');
+                // nom de fichier
+                $safe = $slugger->slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+                $ext  = strtolower($file->guessExtension() ?: 'jpg');
+                $name = sprintf('%s-%s.%s', $safe, substr(md5(uniqid()), 0, 8), $ext);
+                $tmp  = $uploadsDir.'/tmp-'.$name;
 
-                try {
-                    $file->move($targetDir, $name);
-                } catch (FileException $e) {
-                    $this->addFlash('danger', "Échec de l'upload: ".$e->getMessage());
-                    return $this->redirectToRoute('app_profile_edit');
+                $file->move($uploadsDir, 'src-'.$name); // dépose brute
+                $srcPath = $uploadsDir.'/src-'.$name;
+
+                // -> redimension carré 256 (GD)
+                $this->resizeSquare($srcPath, $uploadsDir.'/'.$name, 256, 256);
+                @unlink($srcPath);
+
+                // supprime ancien avatar si présent
+                if ($user->getAvatarPath() && is_file($uploadsDir.'/'.$user->getAvatarPath())) {
+                    @unlink($uploadsDir.'/'.$user->getAvatarPath());
                 }
 
-                // Optionnel: supprimer l’ancien fichier s’il est local
-                $current = $user->getAvatarUrl();
-                if ($current && !preg_match('#^https?://#i', $current)) {
-                    $abs = dirname($targetDir, 1) . DIRECTORY_SEPARATOR . ltrim($current, '/');
-                    if (is_file($abs)) @unlink($abs); // silencieux
-                }
-
-                // On stocke un chemin web public
-                $user->setAvatarUrl('/uploads/avatars/'.$name);
+                $user->setAvatarPath($name);
             }
 
             $em->flush();
@@ -70,6 +66,77 @@ class ProfileController extends AbstractController
         return $this->render('profile/edit.html.twig', [
             'form' => $form,
         ]);
+    }
+
+// helper privé (dans le même contrôleur)
+    private function resizeSquare(string $src, string $dst, int $w, int $h): void
+    {
+        $info = getimagesize($src);
+        if (!$info) return;
+
+        [$sw, $sh] = $info;
+        $type = $info[2]; // IMAGETYPE_*
+
+        // center crop
+        $side = min($sw, $sh);
+        $sx = (int)(($sw - $side) / 2);
+        $sy = (int)(($sh - $side) / 2);
+
+        $srcImg = match ($type) {
+            IMAGETYPE_JPEG => imagecreatefromjpeg($src),
+            IMAGETYPE_PNG  => imagecreatefrompng($src),
+            IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? imagecreatefromwebp($src) : null,
+            default => null
+        };
+        if (!$srcImg) return;
+
+        $dstImg = imagecreatetruecolor($w, $h);
+        // fond transparent si PNG/WebP
+        if (in_array($type, [IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            imagealphablending($dstImg, false);
+            imagesavealpha($dstImg, true);
+            $clear = imagecolorallocatealpha($dstImg, 0,0,0,127);
+            imagefill($dstImg, 0,0, $clear);
+        }
+
+        imagecopyresampled($dstImg, $srcImg, 0,0, $sx,$sy, $w,$h, $side,$side);
+
+        match ($type) {
+            IMAGETYPE_JPEG => imagejpeg($dstImg, $dst, 88),
+            IMAGETYPE_PNG  => imagepng($dstImg, $dst, 6),
+            IMAGETYPE_WEBP => function_exists('imagewebp') ? imagewebp($dstImg, $dst, 88) : imagejpeg($dstImg, $dst, 88),
+            default        => imagejpeg($dstImg, $dst, 88),
+        };
+
+        imagedestroy($srcImg);
+        imagedestroy($dstImg);
+    }
+
+    #[Route('/me/posts', name: 'app_my_posts')]
+    public function myPosts(PostRepository $repo, Request $req): Response
+    {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $page = max(1, (int)$req->query->get('page', 1));
+        $limit = 9;
+
+        $qb = $repo->createQueryBuilder('p')
+            ->andWhere('p.author = :u')->setParameter('u', $this->getUser())
+            ->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->setFirstResult(($page-1)*$limit)
+            ->setMaxResults($limit);
+
+        $posts = $qb->getQuery()->getResult();
+
+        // total
+        $total = (int)$repo->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->andWhere('p.author = :u')->setParameter('u', $this->getUser())
+            ->getQuery()->getSingleScalarResult();
+
+        $pages = max(1, (int)ceil($total / $limit));
+
+        return $this->render('profile/my_posts.html.twig', compact('posts','page','pages','total'));
     }
 }
 

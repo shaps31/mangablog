@@ -149,14 +149,14 @@
     {% endif %}
 
     {# Derniers articles (optionnel) #}
-    {% if latest|default([])|length %}
+    {% if discover|default([])|length %}
         <section class="mb-4 reveal" data-animate="up">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h4 fw-bold m-0">Derniers articles</h2>
+                <h2 class="h4 fw-bold m-0">À découvrir</h2>
                 <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout voir →</a>
             </div>
             <div class="row row-cols-1 row-cols-md-3 g-3">
-                {% for p in latest %}
+                {% for p in discover %}
                     <div class="col">
                         <a href="{{ path('blog_show', {slug: p.slug}) }}" class="card h-100 text-decoration-none hover-shadow">
                             <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy">

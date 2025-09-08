@@ -11,6 +11,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
+
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
@@ -67,6 +68,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $bio = null;
+
+
+    private ?string $avatarPath = null;
+
+
 
     public function __construct()
     {
@@ -128,6 +134,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->password = $password;
         return $this;
     }
+
+    public function getAvatarPath(): ?string { return $this->avatarPath; }
+    public function setAvatarPath(?string $p): self { $this->avatarPath = $p; return $this; }
 
     /**
      * Ensure the session doesn't contain actual password hashes by CRC32C-hashing them (Symfony 7.3+).
@@ -275,17 +284,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function getAvatarOrGravatar(): string
     {
-        $src = $this->avatarUrl ?? $this->avatar;
-        if ($src) {
-            if (preg_match('~^https?://~i', $src)) {
-                return $src;
-            }
-            return '/' . ltrim($src, '/');
+        // 1) Fichier uploadé dans /public/uploads/avatars
+        if (!empty($this->avatarPath)) {
+            return '/uploads/avatars/' . ltrim($this->avatarPath, '/');
         }
 
+        // 2) URL saisie dans le profil (avatarUrl)
+        if (!empty($this->avatarUrl) && filter_var($this->avatarUrl, FILTER_VALIDATE_URL)) {
+            return $this->avatarUrl;
+        }
+
+        // 3) Compatibilité avec un ancien champ "avatar" ou une valeur quelconque
+        $src = $this->avatarUrl ?? $this->avatar ?? null;
+        if (!empty($src)) {
+            if (preg_match('~^https?://~i', $src)) {
+                return $src; // URL absolue
+            }
+            return '/' . ltrim($src, '/'); // chemin relatif
+        }
+
+        // 4) Fallback : Gravatar
         $hash = md5(strtolower(trim((string) $this->email)));
         return "https://www.gravatar.com/avatar/{$hash}?d=identicon&s=160";
     }
+
 
     /** Initiales si pas d’image utile (UI helpers) */
     public function getInitials(): string

@@ -81,6 +81,20 @@ class HomeController extends AbstractController
         $heroCover = filter_var($cover, FILTER_VALIDATE_URL)
             ? $cover
             : 'img/hero-cover.jpg';
+        $discover = $em->createQuery(
+            'SELECT p FROM App\Entity\Post p
+     WHERE p.status = :s
+     ORDER BY p.publishedAt DESC'
+        )->setParameter('s','published')
+            ->setMaxResults(30)
+            ->getResult();
+
+// Exclure ceux déjà dans $trending si besoin
+        $trendingIds = array_map(fn($row) => is_array($row)? $row['post']->getId() : $row->getId(), $trending);
+        $discover = array_values(array_filter($discover, fn($p) => !in_array($p->getId(), $trendingIds, true)));
+
+        shuffle($discover);
+        $discover = array_slice($discover, 0, 6);
 
         return $this->render('home/index.html.twig', [
             'latest' => $latest,
@@ -88,6 +102,7 @@ class HomeController extends AbstractController
             'trending' => $trending,
             'topTags' => $topTags,
             'heroCover' => $heroCover,
+            'discover' => $discover,
         ]);
     }
 }

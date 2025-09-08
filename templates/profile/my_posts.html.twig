@@ -1,0 +1,85 @@
+{# templates/profile/my_posts.html.twig #}
+{% extends 'base.html.twig' %}
+{% block title %}Mes articles{% endblock %}
+
+{% block body %}
+    {% include '_partials/_breadcrumb.html.twig' with {
+        items: [
+            { label: 'Accueil', url: path('app_home') },
+            { label: 'Mon profil', url: path('app_profile_show') },
+            { label: 'Mes articles' }
+        ]
+    } %}
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 m-0">Mes articles</h1>
+        <a href="{{ path('app_post_new') }}" class="btn btn-sm btn-primary">+ Créer un article</a>
+    </div>
+
+    {% if total == 0 %}
+        <div class="alert alert-info">Tu n’as pas encore d’article. Lance-toi !</div>
+    {% else %}
+        <p class="text-muted small">{{ total }} article{{ total>1?'s':'' }} — page {{ page }}/{{ pages }}</p>
+
+        <div class="table-responsive bg-white border rounded">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>Titre</th>
+                    <th>Statut</th>
+                    <th>Publié le</th>
+                    <th>Catégorie</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for p in posts %}
+                    <tr>
+                        <td class="fw-semibold">{{ p.title }}</td>
+                        <td>
+                            {% set st = p.status %}
+                            {% if st == 'published' %}
+                                <span class="badge text-bg-success">Publié</span>
+                            {% elseif st == 'draft' %}
+                                <span class="badge text-bg-warning text-dark">Brouillon</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{{ st }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ p.publishedAt ? p.publishedAt|date('Y-m-d H:i') : '—' }}</td>
+                        <td>{{ p.category ? p.category.name : '—' }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" href="{{ path('blog_show', {slug: p.slug}) }}">Voir</a>
+                            <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_post_edit', {id: p.id}) }}">Éditer</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if pages > 1 %}
+            <nav aria-label="Pagination" class="mt-3">
+                <ul class="pagination">
+                    {% if page > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_my_posts', {'page': page-1}) }}">Précédent</a>
+                        </li>
+                    {% endif %}
+
+                    {% for p in 1..pages %}
+                        <li class="page-item {{ p == page ? 'active' }}">
+                            <a class="page-link" href="{{ path('app_my_posts', {'page': p}) }}">{{ p }}</a>
+                        </li>
+                    {% endfor %}
+
+                    {% if page < pages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_my_posts', {'page': page+1}) }}">Suivant</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% endif %}
+{% endblock %}
