@@ -17,13 +17,11 @@
             </div>
             <div class="col-lg-5 text-center">
                 {# valeur par défaut si rien n'est passé par le contrôleur #}
-                {% set _hero = heroCover|default('img/hero-cover.jpg') %}
-
-                {# Si _hero commence par http(s), on l'utilise tel quel ; sinon on passe par asset() #}
+                {% set _hero   = heroCover|default('img/hero-cover.jpg') %}
                 {% set heroSrc = _hero starts with 'http' ? _hero : asset(_hero) %}
 
-                <img src="{{ heroSrc }}" class="img-fluid rounded-4 shadow-sm"
-                     alt="Cover hero" loading="lazy">
+                <img src="{{ heroSrc }}" class="img-fluid rounded-4 shadow-sm" alt="Cover hero" loading="lazy">
+
             </div>
 
         </div>
