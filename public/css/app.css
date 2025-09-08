@@ -201,6 +201,31 @@ h1,h2,h3,.fw-bold{
     border-radius: 16px; box-shadow: 0 12px 30px rgba(0,0,0,.12);
 }
 
+/* Avatar */
+.avatar-sm{
+    width:32px;height:32px;border-radius:50%;object-fit:cover;display:inline-block;
+}
+.avatar-xxl{
+    width:112px;height:112px;border-radius:50%;object-fit:cover;display:inline-block;
+}
+.avatar-fallback{
+    display:inline-flex;align-items:center;justify-content:center;
+    background:#ffe4d9;color:#b5481b;font-weight:700;
+    border:1px solid rgba(0,0,0,.06);
+}
+
+/* Bouton user discret */
+.btn-navbar-user{
+    background: rgba(255,255,255,.15);
+    color:#fff;border:1px solid rgba(255,255,255,.3);
+    padding:.3rem .5rem;border-radius:999px;
+}
+.btn-navbar-user:hover{ background: rgba(255,255,255,.25); color:#fff; }
+
+/* Petites cartes catégories (déjà en place) – ombre douce */
+.cat-card{ border-radius:16px; }
+
+
 /* Responsive */
 @media (max-width: 992px){
     .home-hero{ padding:1.25rem 1rem !important; }

@@ -52,27 +52,34 @@
             <a class="btn btn-sm {{ current starts with 'blog_' ? 'btn-light' : 'btn-outline-light' }}" href="{{ path('blog_index') }}">Blog</a>
 
             {% if app.user %}
-                <span class="navbar-text small me-2">Connecté en tant que {{ app.user.userIdentifier }}</span>
-                <a class="btn btn-outline-light btn-sm" href="{{ path('app_logout') }}">Se déconnecter</a>
-                <a href="{{ path('app_post_new') }}" class="btn btn-sm btn-warning ms-2">+ Créer un article</a>
-
-                {% if is_granted('ROLE_ADMIN') %}
-                    <div class="btn-group ms-2">
-                        <a class="btn btn-outline-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-expanded="false">Back-office</a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="{{ path('admin_dashboard') }}">Dashboard</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ path('app_post_index') }}">Articles</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_category_index') }}">Catégories</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_tag_index') }}">Tags</a></li>
-                            <li><a class="dropdown-item" href="{{ path('app_comment_index') }}">Commentaires</a></li>
-                        </ul>
-                    </div>
-                {% endif %}
+                <div class="dropdown">
+                    {% set avat = app.user.avatarUrl %}
+                    {% set src = avat ? (avat starts with 'http' ? avat : asset(avat)) : null %}
+                    <button class="btn btn-navbar-user dropdown-toggle d-flex align-items-center gap-2" data-bs-toggle="dropdown">
+                        {% if src %}
+                            <img src="{{ src }}" class="avatar-sm" alt="Avatar">
+                        {% else %}
+                            <span class="avatar-sm avatar-fallback">{{ app.user.initials }}</span>
+                        {% endif %}
+                        <span class="d-none d-md-inline">{{ app.user.displayName }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ path('app_profile_show') }}">Mon profil</a></li>
+                        <li><a class="dropdown-item" href="{{ path('app_profile_edit') }}">Modifier</a></li>
+                        {% if is_granted('ROLE_ADMIN') %}
+                            <li><a class="dropdown-item" href="{{ path('admin_dashboard') }}">Back-office</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ path('app_logout') }}">Se déconnecter</a></li>
+                    </ul>
+                </div>
             {% else %}
                 <a class="btn btn-outline-light btn-sm" href="{{ path('app_register') }}">Créer un compte</a>
                 <a class="btn btn-light btn-sm" href="{{ path('app_login') }}">Se connecter</a>
             {% endif %}
+
+
+
         </div>
     </div>
 </nav>
