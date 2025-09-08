@@ -142,15 +142,14 @@ final class CommentController extends AbstractController
         $comment->setStatus($new);
         $em->flush();
 
-        // Réponse JSON si AJAX, sinon comportement normal (flash + redirect)
         if ($request->isXmlHttpRequest() || str_contains((string)$request->headers->get('Accept'), 'application/json')) {
             return $this->json([
-                'ok'        => true,
+                'ok' => true,
                 'newStatus' => $new,
-                'labels'    => [
+                'labels' => [
                     'btn'    => $new === 'approved' ? 'Annuler' : 'Approuver',
                     'status' => $new === 'approved' ? 'approuvé' : 'en attente',
-                ]
+                ],
             ]);
         }
 

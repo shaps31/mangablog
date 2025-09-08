@@ -1,13 +1,11 @@
 {# templates/comment/_moderate_buttons.html.twig #}
-{# Contexte requis: { comment } #}
+{# Contexte: { comment } #}
 <div class="js-comment" data-id="{{ comment.id }}">
-    {# Badge statut (le JS mettra à jour la classe + le texte) #}
-    <span class="badge js-comment-status
+  <span class="badge js-comment-status
         {{ comment.status == 'approved' ? 'text-bg-success' : 'text-bg-warning text-dark' }}">
     {{ comment.status == 'approved' ? 'approuvé' : 'en attente' }}
   </span>
 
-    {# Formulaire POST (fallback), intercepté par le JS pour faire un fetch #}
     <form method="post"
           action="{{ path('app_comment_toggle', { id: comment.id }) }}"
           class="d-inline js-comment-toggle"
