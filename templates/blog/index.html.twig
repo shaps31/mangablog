@@ -1,5 +1,33 @@
 {# templates/blog/index.html.twig #}
 {% extends 'base.html.twig' %}
+
+{% block meta %}
+    {{ parent() }}
+
+    {# Valeurs sûres, si le contrôleur n’a pas fourni page/pages/q #}
+    {% set curPage  = page  | default(app.request.get('page')  | default(1)) %}
+    {% set maxPages = pages | default(1) %}
+    {% set qval     = q     | default(app.request.get('q')     | default('')) %}
+
+    {# Canonical : retirer page=1 #}
+    {% set query = app.request.query.all | merge({'page': curPage > 1 ? curPage : null}) %}
+    <link rel="canonical" href="{{ url('blog_index', query) }}">
+
+    {# Prev/Next pour pagination #}
+    {% if curPage > 1 %}
+        <link rel="prev" href="{{ url('blog_index', app.request.query.all | merge({'page': curPage - 1})) }}">
+    {% endif %}
+    {% if curPage < maxPages %}
+        <link rel="next" href="{{ url('blog_index', app.request.query.all | merge({'page': curPage + 1})) }}">
+    {% endif %}
+
+    {# Meta description contextualisée (si recherche) #}
+    {% if qval %}
+        <meta name="description"
+              content="Résultats pour « {{ qval }} » — page {{ curPage }} sur {{ maxPages }} sur Kamimanga.">
+    {% endif %}
+{% endblock %}
+
 {% block title %}Blog{% endblock %}
 
 {% block body %}

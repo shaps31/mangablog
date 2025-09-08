@@ -127,9 +127,15 @@ final class CommentController extends AbstractController
         return $this->redirectToRoute('app_comment_index');
     }
 
-    #[Route('/comment/{id}/toggle', name: 'app_comment_toggle', methods: ['GET'])]
-    public function toggle(Comment $comment, Request $request,EntityManagerInterface $em): RedirectResponse
+    #[Route('/admin/comment/{id}/toggle', name: 'app_comment_toggle', methods: ['POST'])]
+    public function toggle(Comment $comment, Request $request, EntityManagerInterface $em): Response
     {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('comment_toggle'.$comment->getId(), $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('CSRF token invalide.');
+        }
+
         $comment->setStatus($comment->getStatus() === 'approved' ? 'pending' : 'approved');
         $em->flush();
 
@@ -138,11 +144,7 @@ final class CommentController extends AbstractController
             : 'Approbation annulée.'
         );
 
-        $back = $request->query->get('back')
-            ?: $request->headers->get('referer')
-                ?: $this->generateUrl('app_comment_index');
-
-        return $this->redirect($back);
-
+        $back = $request->request->get('back') ?: $request->headers->get('referer');
+        return $this->redirect($back ?: $this->generateUrl('app_comment_index'));
     }
 }

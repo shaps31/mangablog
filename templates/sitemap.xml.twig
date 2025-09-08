@@ -1,0 +1,12 @@
+{# templates/sitemap.xml.twig #}
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    {% for it in items %}
+        <url>
+            <loc>{{ it.loc }}</loc>
+            {% if it.lastmod %}<lastmod>{{ it.lastmod }}</lastmod>{% endif %}
+            <changefreq>weekly</changefreq>
+            <priority>0.7</priority>
+        </url>
+    {% endfor %}
+</urlset>

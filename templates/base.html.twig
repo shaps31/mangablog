@@ -15,6 +15,15 @@
     {# Google Font pour les titres #}
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Oswald:wght@500;700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    {# Logo #}
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+
+    {% block meta %}
+        <meta name="description" content="MangaBlog — actus, critiques et classements manga.">
+               <meta property="og:description" content="Découvre, explore, partage le monde du manga.">
+        <meta property="og:type" content="website">
+        <link rel="canonical" href="{{ app.request.uri }}">
+    {% endblock %}
 
 
     {# Ton CSS local #}
@@ -45,8 +54,11 @@
 
 <nav class="navbar navbar-dark bg-dark">
     <div class="container d-flex justify-content-between align-items-center">
-        <a class="navbar-brand fw-bold" href="{{ path('app_home') }}">KamiManga</a>
-
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ path('app_home') }}">
+            {# Icône #}
+            {% include '_partials/logo_icon.svg.twig' %}
+            <span class="fw-bold">KamiManga</span>
+        </a>
         <div class="d-flex align-items-center gap-2">
             <a class="btn btn-sm {{ current == 'app_home' ? 'btn-light' : 'btn-outline-light' }}" href="{{ path('app_home') }}">Accueil</a>
             <a class="btn btn-sm {{ current starts with 'blog_' ? 'btn-light' : 'btn-outline-light' }}" href="{{ path('blog_index') }}">Blog</a>
