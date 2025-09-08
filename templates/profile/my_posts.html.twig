@@ -63,19 +63,20 @@
                 <ul class="pagination">
                     {% if page > 1 %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ path('app_my_posts', {'page': page-1}) }}">Précédent</a>
+                            <a class="page-link" href="{{ path('app_profile_app_my_posts', {'page': page-1}) }}">Précédent</a>
                         </li>
                     {% endif %}
 
                     {% for p in 1..pages %}
                         <li class="page-item {{ p == page ? 'active' }}">
-                            <a class="page-link" href="{{ path('app_my_posts', {'page': p}) }}">{{ p }}</a>
+                            <a class="page-link" href="{{ path('app_profile_app_my_posts', {'page': p}) }}">{{ p }}</a>
                         </li>
                     {% endfor %}
 
                     {% if page < pages %}
                         <li class="page-item">
-                            <a class="page-link" href="{{ path('app_my_posts', {'page': page+1}) }}">Suivant</a>
+                            <a class="page-link" href="{{ path('app_profile_app_my_posts
+', {'page': page+1}) }}">Suivant</a>
                         </li>
                     {% endif %}
                 </ul>

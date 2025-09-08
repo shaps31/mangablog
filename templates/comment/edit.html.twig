@@ -2,13 +2,34 @@
 {% block title %}Éditer commentaire #{{ comment.id }}{% endblock %}
 
 {% block body %}
-    <h1 class="h4 mb-3">Éditer le commentaire #{{ comment.id }}</h1>
+    <h1 class="h4 mb-3">Éditer commentaire #{{ comment.id }}</h1>
 
-    {{ include('comment/_form.html.twig', {'button_label': 'Mettre à jour'}) }}
-
-    <div class="mt-3 d-flex gap-2">
+    <div class="d-flex gap-2 mb-3">
         <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_comment_index') }}">↩︎ Retour</a>
-        {# ⚠️ On passe bien "comment" au partial pour qu'il ait l'ID #}
+        <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_comment_show', { id: comment.id }) }}">Voir</a>
+
+        {# Boutons Approuver / Annuler l’approbation #}
+        {{ include('comment/_moderate_buttons.html.twig', { comment: comment }) }}
+
+        {# Supprimer #}
         {{ include('comment/_delete_form.html.twig', { comment: comment }) }}
+    </div>
+
+    <div class="bg-white p-3 border rounded">
+        {% if form is defined and form %}
+            {{ form_start(form) }}
+            {# Si ton CommentType ne contient que "content", ceci suffit. #}
+            {{ form_row(form.content) }}
+
+            {# Si tu as d'autres champs dans le formulaire, tu peux afficher tout le reste : #}
+            {{ form_rest(form) }}
+
+            <button class="btn btn-primary btn-sm mt-2">Enregistrer</button>
+            {{ form_end(form) }}
+        {% else %}
+            <div class="alert alert-warning mb-0">
+                Formulaire indisponible.
+            </div>
+        {% endif %}
     </div>
 {% endblock %}

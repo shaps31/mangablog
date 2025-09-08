@@ -3,7 +3,7 @@
 {% block title %}{{ post.title }} — MangaBlog{% endblock %}
 
 {% block body %}
-    {# ✅ Fil d’Ariane via partial réutilisable #}
+    {# Fil d’Ariane via partial #}
     {% set crumbs = [
         { label: 'Accueil', url: path('app_home') },
         { label: 'Blog',    url: path('blog_index', app.request.query.all) }
@@ -21,13 +21,11 @@
         <header class="mb-3">
             <h1 class="h3 mb-1" itemprop="headline">{{ post.title }}</h1>
 
-            {# métadonnées : date + temps de lecture + catégorie #}
             <div class="text-muted small">
                 <time datetime="{{ (post.publishedAt ?? 'now')|date('c') }}" itemprop="datePublished">
                     {{ post.publishedAt ? post.publishedAt|date('d/m/Y H:i') : 'Brouillon' }}
                 </time>
 
-                {# ⏱ ~200 mots/minute #}
                 {% set words   = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
                 {% set minutes = (words / 200)|round(0, 'ceil') %}
                 • ⏱ {{ minutes }} min
@@ -41,7 +39,6 @@
                 {% endif %}
             </div>
 
-            {# tags cliquables #}
             {% if post.tags|length %}
                 <div class="mt-2">
                     {% for t in post.tags %}
@@ -54,16 +51,14 @@
             {% endif %}
         </header>
 
-        {# cover avec fallback + alt + lazy #}
         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
         <img src="{{ coverUrl }}" class="img-cover mb-2" alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
 
-        {# contenu : on garde les retours à la ligne saisis dans l’admin #}
         <div class="content" style="white-space: pre-line;" itemprop="articleBody">
             {{ post.content }}
         </div>
 
-        {# Boutons de partage #}
+        {# Partage #}
         {% set pageUrl = absolute_url(path('blog_show', {slug: post.slug})) %}
         <div class="d-flex flex-wrap gap-2 my-3">
             <a class="btn btn-sm btn-outline-secondary"
@@ -87,7 +82,7 @@
         </div>
     </article>
 
-    {# Articles liés (même catégorie) #}
+    {# Articles liés #}
     {% if related is defined and related|length %}
         <h2 class="h6 mt-4">Dans la même catégorie</h2>
         <div class="row row-cols-1 row-cols-md-3 g-3">
@@ -119,9 +114,21 @@
             {% for c in comments %}
                 <div class="p-3 border rounded bg-white">
                     <div class="small text-muted mb-2">
-                        {{ c.createdAt|date('Y-m-d H:i') }} — {{ c.author.userIdentifier }}
+                        {{ c.createdAt|date('Y-m-d H:i') }} —
+                        {% if c.author %}
+                            {{ c.author.displayName ?? c.author.userIdentifier }}
+                        {% else %}
+                            Anonyme
+                        {% endif %}
                     </div>
                     <div style="white-space: pre-line;">{{ c.content }}</div>
+
+                    {# ✅ Boutons admin de modération inline (optionnel) #}
+                    {% if is_granted('ROLE_ADMIN') %}
+                        <div class="mt-2">
+                            {{ include('comment/_moderate_buttons.html.twig', { comment: c }) }}
+                        </div>
+                    {% endif %}
                 </div>
             {% endfor %}
         </div>
