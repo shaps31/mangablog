@@ -5,3 +5,4 @@
 /public/bundles/
 /public/uploads/*
 !/public/uploads/.gitignore
+*:[Zz]one.Identifier
