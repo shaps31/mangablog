@@ -1,147 +1,179 @@
 {# templates/home/index.html.twig #}
 {% extends 'base.html.twig' %}
-{% block title %}Accueil — MangaBlog{% endblock %}
+{% block title %}Accueil{% endblock %}
 
 {% block body %}
-    {# HERO #}
-    <section class="hero p-4 p-lg-5 mb-4 reveal" data-animate="fade">
-        <div class="row align-items-center">
+
+    {# Hero immersif #}
+    <section class="hero card border-0 shadow-sm p-4 p-lg-5 mb-4 reveal" data-animate="up">
+        <div class="row align-items-center g-4">
             <div class="col-lg-7">
-                <h1 class="fw-bold mb-2">Bienvenue sur MangaBlog</h1>
-                <p class="text-muted mb-3">
-                    Actus, critiques et classements autour du manga. Découvre les séries qui font vibrer 2025 ✨
+                <h1 class="display-5 fw-bold mb-2">Bienvenue sur KamiManga</h1>
+                <p class="lead mb-3">
+                    Actus, critiques et classements autour du manga.<br class="d-none d-md-inline">
+                    <span class="text-muted">Découvre, explore, partage le monde du manga ✨</span>
                 </p>
-                <a class="btn btn-primary btn-lg" href="{{ path('blog_index') }}">Voir les derniers articles</a>
+                <a href="{{ path('blog_index') }}" class="btn btn-read btn-lg px-4">Voir les derniers articles</a>
             </div>
-            <div class="col-lg-5 text-center d-none d-lg-block">
-                <img src="{{ asset('img/cover-placeholder.png') }}" alt="" style="max-height:220px" class="img-fluid">
+            <div class="col-lg-5 text-center">
+                {# valeur par défaut si rien n'est passé par le contrôleur #}
+                {% set _hero = heroCover|default('img/hero-cover.jpg') %}
+
+                {# Si _hero commence par http(s), on l'utilise tel quel ; sinon on passe par asset() #}
+                {% set heroSrc = _hero starts with 'http' ? _hero : asset(_hero) %}
+
+                <img src="{{ heroSrc }}" class="img-fluid rounded-4 shadow-sm"
+                     alt="Cover hero" loading="lazy">
             </div>
+
         </div>
     </section>
 
-    {# CATEGORIES POPULAIRES #}
-    <section class="mb-4 reveal" data-animate="left">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h2 class="h4 fw-bold m-0">Catégories populaires</h2>
-            <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout le blog →</a>
-        </div>
+    {# Catégories populaires en cartes #}
+    {% set popularCategories = popularCategories|default([]) %}
+    {% if popularCategories|length %}
+        {% set icons = {
+            'Shonen':'🏆', 'Shojo':'💕', 'Seinen':'⚔️', 'Josei':'🌸',
+            'Isekai / Fantasy':'🪄', 'Sports':'🏅', 'Classiques':'🏛️',
+            'Nouveautés 2025':'✨', 'Top / Classements':'📊', 'Adaptations Anime':'🎬'
+        } %}
+        <section class="mb-4 reveal" data-animate="left">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h4 fw-bold m-0">Catégories populaires</h2>
+                <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout le blog →</a>
+            </div>
 
-        <div class="d-flex flex-wrap gap-2">
-            {% for row in popularCategories %}
-                {# row attendu sous forme scalaire : { id, name, total } #}
-                <a class="badge badge-tag"
-                   href="{{ path('blog_index', {'category': row.id, 'page': 1}) }}">
-                    {{ row.name }} <span class="text-muted">({{ row.total }})</span>
-                </a>
-            {% else %}
-                <span class="text-muted">Aucune catégorie pour l’instant.</span>
-            {% endfor %}
-        </div>
-    </section>
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3">
+                {% for row in popularCategories %}
+                    {% set c = row.category ?? row.c ?? row %}
+                    {% set total = row.total ?? row.t ?? 0 %}
+                    <div class="col">
+                        <a href="{{ path('blog_index', {'category': c.id}) }}" class="card cat-card h-100 text-decoration-none">
+                            <div class="card-body d-flex align-items-center gap-3">
+                                <div class="cat-emoji">{{ icons[c.name]|default('📚') }}</div>
+                                <div>
+                                    <div class="fw-semibold text-body">{{ c.name }}</div>
+                                    <div class="text-muted small">{{ total }} article{{ total>1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
 
-    {# EN TENDANCE #}
+    {# En tendance (carousel) #}
+    {% set trending = trending|default([]) %}
     {% if trending|length %}
         <section class="mb-4 reveal" data-animate="right">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h4 fw-bold m-0">En tendance 🔥</h2>
-                <a class="small text-decoration-none" href="{{ path('blog_index') }}">Voir plus →</a>
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <div>
+                    <h2 class="h4 fw-bold m-0">En tendance 🔥</h2>
+                    <p class="text-muted small m-0">Basé sur les commentaires approuvés récents.</p>
+                </div>
+                <a class="small text-decoration-none" href="{{ path('blog_index') }}#tendance">Voir plus →</a>
             </div>
 
-            <div class="row row-cols-1 row-cols-md-3 g-3">
-                {% for row in trending %}
-                    {# Compatibilité :
-             - format A: row = { post: Post, comments: int }
-             - format B: row = Post directement (sans .post)
-                    #}
-                    {% set post = row.post is defined ? row.post : row %}
-                    {% set commentsCount = row.comments is defined
-                        ? row.comments
-                        : (post.comments|filter(c => c.status == 'approved')|length) %}
+            <div id="trendCarousel" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-inner">
+                    {% for chunk in trending|batch(3, null) %}
+                        <div class="carousel-item {{ loop.first ? 'active' : '' }}">
+                            <div class="row g-3">
+                                {% for p in chunk %}
+                                    {% if p %}
+                                        {% set post = p.post is defined ? p.post : p %}
+                                        {% set commentsCount = p.comments is defined
+                                            ? p.comments
+                                            : (post.comments|filter(c => c.status == 'approved')|length)
+                                        %}
 
-                    <div class="col">
-                        <div class="card h-100">
-                            {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy" decoding="async" width="1200" height="630">
-                            <div class="card-body">
-                                <div class="small text-muted mb-1">
-                                    {{ post.publishedAt ? post.publishedAt|date('d/m/Y') : '—' }} • {{ post.category ? post.category.name : '—' }}
-                                </div>
-                                <h3 class="h5 card-title">
-                                    <a class="text-decoration-none" href="{{ path('blog_show', {slug: post.slug}) }}">{{ post.title }}</a>
-                                </h3>
-                                <p class="text-muted small mb-3">{{ post.content|striptags|u.truncate(140, '…') }}</p>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <a class="btn btn-sm btn-read" href="{{ path('blog_show', {slug: post.slug}) }}">Lire</a>
-                                    <small class="text-muted">{{ commentsCount }} com.</small>
-                                </div>
+                                        <div class="col-12 col-md-4">
+                                            <a class="card h-100 text-decoration-none hover-shadow"
+                                               href="{{ path('blog_show', {'slug': post.slug}) }}">
+                                                <img class="img-cover"
+                                                     src="{{ post.cover ?? asset('img/cover-placeholder.png') }}"
+                                                     alt="Cover {{ post.title }}" loading="lazy">
+                                                <div class="card-body">
+                                                    <div class="small text-muted mb-1">
+                                                        {{ post.publishedAt ? post.publishedAt|date('Y-m-d') : '—' }}
+                                                        • {{ post.category ? post.category.name : '—' }}
+                                                        • {{ commentsCount }} com.
+                                                    </div>
+                                                    <h3 class="h5 card-title">{{ post.title }}</h3>
+                                                    <p class="card-text text-muted mb-0">
+                                                        {{ post.content|striptags|u.truncate(120, '…') }}
+                                                    </p>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <button class="carousel-control-prev" type="button"
+                        data-bs-target="#trendCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Précédent</span>
+                </button>
+                <button class="carousel-control-next" type="button"
+                        data-bs-target="#trendCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Suivant</span>
+                </button>
             </div>
         </section>
     {% endif %}
 
-    {# 3 DERNIERS EN GRAND #}
-    {% if latest|length %}
-        <section class="mb-4 reveal" data-animate="fade">
-            <h2 class="h4 fw-bold mb-2">Derniers articles</h2>
-            <div class="row row-cols-1 row-cols-md-3 g-3">
-                {% for post in latest %}
-                    <div class="col">
-                        <div class="card h-100">
-                            {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ coverUrl }}" class="img-cover" alt="Cover : {{ post.title }}" loading="lazy" decoding="async" width="1200" height="630">
-                            <div class="card-body">
-                                <div class="small text-muted mb-1">
-                                    {{ post.publishedAt ? post.publishedAt|date('d/m/Y') : '—' }} • {{ post.category ? post.category.name : '—' }}
-                                </div>
-                                <h3 class="h5 card-title">
-                                    <a class="text-decoration-none" href="{{ path('blog_show', {slug: post.slug}) }}">{{ post.title }}</a>
-                                </h3>
-                                <p class="text-muted small mb-3">{{ post.content|striptags|u.truncate(160, '…') }}</p>
-                                <a class="btn btn-sm btn-read" href="{{ path('blog_show', {slug: post.slug}) }}">Lire</a>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        </section>
-    {% endif %}
-
-    {# CITATION / SLOGAN #}
-    <section class="mb-4 reveal" data-animate="left">
-        <div class="p-4 p-lg-5 text-center border bg-white rounded-4">
-            <blockquote class="mb-0 fw-bold" style="font-size:1.2rem">
-                « Le manga est un art de vivre. Ici, on le partage. »
-            </blockquote>
-        </div>
+    {# Citation / slogan #}
+    <section class="quote-hero text-center my-5 reveal" data-animate="fade">
+        <blockquote class="blockquote m-0">
+            <p class="mb-0">« Le manga est un art de vivre. Ici, on le partage. »</p>
+        </blockquote>
     </section>
 
-    {# TAGS POPULAIRES #}
+    {# Nuage de tags (optionnel) #}
+    {% set topTags = topTags|default([]) %}
     {% if topTags|length %}
         <section class="mb-4 reveal" data-animate="right">
             <h2 class="h4 fw-bold mb-2">Découvrir par tags</h2>
             <div class="tag-cloud">
                 {% for row in topTags %}
-                    {# Compatible deux formats :
-             - A: { name, c }
-             - B: { tag: { id, name }, c }
-                    #}
-                    {% set tagName = row.name is defined ? row.name : (row.tag is defined ? row.tag.name : '') %}
-                    {% set tagId   = row.id   is defined ? row.id   : (row.tag is defined ? row.tag.id   : null) %}
-                    {% if tagId %}
-                        <a href="{{ path('blog_index', {'tag': tagId, 'page': 1}) }}"># {{ tagName }}</a>
-                    {% else %}
-                        <span class="text-muted"># {{ tagName }}</span>
-                    {% endif %}
+                    {% set name = row.name ?? row[0] ?? '' %}
+                    <a class="badge bg-secondary text-decoration-none me-1 mb-2"
+                       href="{{ path('blog_index', {'tag': row.id ?? row.tag_id ?? 0}) }}">#{{ name }}</a>
                 {% endfor %}
             </div>
         </section>
     {% endif %}
 
-    {# CTA final #}
-    <div class="text-center">
-        <a class="btn btn-lg btn-primary" href="{{ path('blog_index') }}">Voir tout le blog</a>
-    </div>
+    {# Derniers articles (optionnel) #}
+    {% if latest|default([])|length %}
+        <section class="mb-4 reveal" data-animate="up">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h4 fw-bold m-0">Derniers articles</h2>
+                <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout voir →</a>
+            </div>
+            <div class="row row-cols-1 row-cols-md-3 g-3">
+                {% for p in latest %}
+                    <div class="col">
+                        <a href="{{ path('blog_show', {slug: p.slug}) }}" class="card h-100 text-decoration-none hover-shadow">
+                            <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy">
+                            <div class="card-body">
+                                <div class="small text-muted mb-1">
+                                    {{ p.category ? p.category.name ~ ' • ' : '' }}
+                                    {{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}
+                                </div>
+                                <div class="fw-semibold text-body">{{ p.title }}</div>
+                            </div>
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
 {% endblock %}

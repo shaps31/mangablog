@@ -128,7 +128,7 @@ final class CommentController extends AbstractController
     }
 
     #[Route('/comment/{id}/toggle', name: 'app_comment_toggle', methods: ['GET'])]
-    public function toggle(Comment $comment, EntityManagerInterface $em): RedirectResponse
+    public function toggle(Comment $comment, Request $request,EntityManagerInterface $em): RedirectResponse
     {
         $comment->setStatus($comment->getStatus() === 'approved' ? 'pending' : 'approved');
         $em->flush();
@@ -138,9 +138,11 @@ final class CommentController extends AbstractController
             : 'Approbation annulée.'
         );
 
-        return $this->redirect($request->query->get('back')
-            ?? $request->headers->get('referer')
-            ?? $this->generateUrl('app_comment_index'));
+        $back = $request->query->get('back')
+            ?: $request->headers->get('referer')
+                ?: $this->generateUrl('app_comment_index');
+
+        return $this->redirect($back);
 
     }
 }

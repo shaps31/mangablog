@@ -145,4 +145,17 @@ Commit:
 ## 2025-09-07 — Admin pagination
 - Back-office Articles (/post) : ajout d’une pagination serveur + compteur “N articles — page X/Y”.
 - Conserve les paramètres `page` et `size`, liens accessibles (Précédent/Suivant).
-  Commit: feat(bo/posts): pagination de la liste + compteur résultats (page X/Y)
+ - Commit: feat(bo/posts): pagination de la liste + compteur résultats (page X/Y)
+
+2025-09-07 — Sprint UI/UX
+Thème adouci (Inter + Oswald), navbar en dégradé + bordure plus sombre
+
+Boutons arrondis (dont “Lire”), couleurs moins agressives
+
+Cartes : zoom léger de la cover au survol, ombres plus subtiles
+
+Badges & breadcrumbs en violet secondaire (brand-alt)
+
+Reveal CSS/JS (respecte prefers-reduced-motion)
+
+README mis à jour (installation, URLs, choix, limites)

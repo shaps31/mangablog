@@ -1,64 +1,35 @@
-# MangaBlog — mini-blog Symfony (manga/anime)
+# MangaBlog (Symfony)
 
-Petit blog éditorial avec back-office : articles, catégories, tags, commentaires et un dashboard avec métriques + mini-graphes.
-
----
+Petit blog de mangas : actus, classements et critiques.
+**Stack :** Symfony 6/7, Twig, Doctrine ORM (SQLite par défaut), Bootstrap 5, Chart.js, Tom Select.
 
 ## ✨ Fonctionnalités
 
-**Public**
-- Liste des articles `/blog` avec :
-    - recherche texte,
-    - filtres par **catégorie** et **tag**,
-    - **pagination** (conserve les filtres), indicateur **Page X / Y**,
-    - **compteur** de résultats + **bouton Réinitialiser** quand filtres actifs.
-- Bandeau “**Ce mois-ci**” (total publiés) + **répartition par catégorie** (badges).
-- Page article :
-    - cover (via URL) avec **fallback local** si vide,
-    - **tags cliquables** (surbrillance du tag actif),
-    - **articles de la même catégorie** en bas,
-    - **commentaires** : envoi → `pending`, affichage quand `approved` (auth requis).
-- **Animations douces** au scroll (reveal).
+- Front office :
+    - Filtrage (recherche, catégories, tags), pagination
+    - Tags cliquables, estimation du temps de lecture
+    - Page article avec suggestions “dans la même catégorie”
+    - Accueil enrichi : héros, catégories populaires, tendances, tags
+- Back office :
+    - Dashboard (compteurs, “posts par mois”, top tags)
+    - CRUD Articles / Catégories / Tags / Commentaires
+    - Modération rapide en liste (Approuver / Annuler / Supprimer)
+- UX/UI :
+    - Thème orange/violet, cartes modernes, animations “reveal”
+    - Aperçu instantané de la couverture (URL uniquement)
 
-**Back-office**
-- CRUD : **Post**, **Category**, **Tag**, **Comment**.
-- **Sécurité** : accès restreint aux CRUD et au Dashboard.
-- **Dashboard** `/admin` :
-    - tuiles de **compteurs** (articles, catégories, tags, commentaires),
-    - derniers articles publiés,
-    - **commentaires en attente** (actions rapides : *Approuver / Voir*),
-    - **Top catégories** (par nb d’articles),
-    - mini-graphes (Chart.js) :
-        - **articles publiés par mois** (année courante),
-        - **top tags** (par nb d’articles publiés).
+## 🚀 Démarrer
 
-**Édition**
-- Champ **tags** ergonomique (Tom Select) en multi-sélection.
-- **Aperçu dynamique** de la cover pendant la saisie (JS simple, URL only).
-- Slug auto (champ vide → sluggifié depuis le titre).
-- Badge visuel **Publié / Brouillon** dans les listes.
-
----
-
-## 🧰 Stack & choix techniques
-
-- **Symfony** (PHP) + **Twig** + **Doctrine** (SQLite).
-- **Bootstrap 5** (CDN) + **Tom Select** (CDN) + **Chart.js** (CDN).
-- **Aucun build front** requis (pas de Webpack/Vite) — assets statiques :
-    - `public/css/app.css`
-    - `public/js/app.js`
-- **Cover uniquement par URL** (pas d’upload de fichier pour rester dans le cadre du sujet).
-- **Tom Select** : pas de création “à la volée” des tags (idée future).
-
----
-
-## 🚀 Démarrage
-
-### 1) Prérequis
-- PHP 8.1+ (avec ext-sqlite3)
-- Composer
-- (facultatif) Symfony CLI
-
-### 2) Dépendances
 ```bash
+# 1) Dépendances
 composer install
+
+# 2) DB (SQLite par défaut)
+php bin/console doctrine:database:create --if-not-exists
+php bin/console doctrine:migrations:migrate -n
+
+# 3) (Optionnel) Fixtures de démo — ⚠️ écrase la base
+# php bin/console doctrine:fixtures:load -n
+
+# 4) Serveur
+symfony serve -d   # ou  php -S 127.0.0.1:8000 -t public
