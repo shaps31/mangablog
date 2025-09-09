@@ -146,11 +146,21 @@
     {# ===========================
        Réactions
        =========================== #}
-    <div id="reactions" class="d-flex gap-2 my-3">
-        {% for k,emoji in {'fire':'🔥','lol':'😂','cry':'😭','wow':'🤯'} %}
-            <button class="btn btn-sm btn-light reaction" data-kind="{{ k }}">{{ emoji }}</button>
+    {# Réactions #}
+    <div id="reactions" class="d-flex gap-2 align-items-center my-3">
+        {% set emojis = {'fire':'🔥','lol':'😂','cry':'😭','wow':'🤯'} %}
+        {% for kind, emoji in emojis %}
+            <button
+                class="btn btn-sm btn-light reaction {{ kind in rxMine ? 'active' : '' }}"
+                data-kind="{{ kind }}"
+                aria-pressed="{{ kind in rxMine ? 'true' : 'false' }}"
+                type="button">
+                <span class="me-1">{{ emoji }}</span>
+                <span class="count">{{ rxCounts[kind]|default(0) }}</span>
+            </button>
         {% endfor %}
     </div>
+
 
     {# ===========================
        Commentaires
@@ -230,23 +240,39 @@
 {% block scripts %}
     {{ parent() }}
     <script>
-        document.querySelectorAll('.reaction').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                try {
-                    const r = await fetch('{{ path('reaction_toggle', {id: post.id}) }}', {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'fetch',
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token('react' ~ post.id) }}'
-                        },
-                        body: JSON.stringify({ kind: btn.dataset.kind })
-                    });
-                    if (!r.ok) console.warn('reaction error');
-                } catch (e) {
-                    console.warn('reaction error', e);
-                }
+        (function(){
+            const url = '{{ path('reaction_toggle', {id: post.id}) }}';
+            const token = '{{ csrf_token('react' ~ post.id) }}';
+
+            document.querySelectorAll('#reactions .reaction').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    // si non connecté, le fetch sera redirigé vers /login
+                    let wasActive = btn.classList.contains('active');
+                    try {
+                        const res = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'fetch',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: JSON.stringify({ kind: btn.dataset.kind })
+                        });
+
+                        if (res.redirected) { window.location.href = res.url; return; }
+                        if (!res.ok) { console.warn('Reaction error'); return; }
+
+                        // MAJ UI optimiste
+                        const cntEl = btn.querySelector('.count');
+                        let n = parseInt(cntEl.textContent || '0', 10);
+                        if (wasActive) { n = Math.max(0, n - 1); btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); }
+                        else { n = n + 1; btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); }
+                        cntEl.textContent = n;
+                    } catch(e) {
+                        console.error(e);
+                    }
+                });
             });
-        });
+        })();
     </script>
 {% endblock %}

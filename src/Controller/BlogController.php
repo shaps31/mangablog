@@ -157,6 +157,36 @@ final class BlogController extends AbstractController
         } else {
             $reco = [];
         }
+        // --- Réactions : compte par type + réactions de l'utilisateur ---
+        $rxKinds = ['fire','lol','cry','wow'];
+
+// Comptes par type
+        $rows = $em->createQuery(
+            'SELECT r.kind AS k, COUNT(r.id) AS c
+     FROM App\Entity\Reaction r
+     WHERE r.post = :post
+     GROUP BY r.kind'
+        )->setParameter('post', $post)->getArrayResult();
+
+        $rxCounts = array_fill_keys($rxKinds, 0);
+        foreach ($rows as $row) {
+            $rxCounts[$row['k']] = (int)$row['c'];
+        }
+
+// Réactions de l'utilisateur connecté
+        $rxMine = [];
+        if ($this->getUser()) {
+            $mine = $em->createQuery(
+                'SELECT r.kind AS k
+         FROM App\Entity\Reaction r
+         WHERE r.post = :post AND r.user = :u'
+            )->setParameters(['post'=>$post, 'u'=>$this->getUser()])
+                ->getArrayResult();
+
+            $rxMine = array_map(fn($r) => $r['k'], $mine);
+        }
+
+
 
         return $this->render('blog/show.html.twig', [
             'post'     => $post,
@@ -165,6 +195,10 @@ final class BlogController extends AbstractController
             'related'  => $related,
             'trending' => $trending,
             'reco'     => $reco,
+            'rxCounts' => $rxCounts,
+            'rxMine'   => $rxMine,
+            'rxKinds'  => $rxKinds,
+
         ]);
     }
 }
