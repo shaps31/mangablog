@@ -109,3 +109,9 @@ function flashClient(type, message) {
     document.body.appendChild(div);
     setTimeout(() => div.remove(), 3000);
 }
+
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('spoiler')) {
+        e.target.classList.toggle('revealed');
+    }
+});
