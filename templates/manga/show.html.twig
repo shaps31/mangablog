@@ -1,0 +1,34 @@
+{# templates/manga/show.html.twig #}
+{% extends 'base.html.twig' %}
+{% block title %}{{ manga.title }} — Fiche{% endblock %}
+{% block body %}
+    <article itemscope itemtype="https://schema.org/CreativeWork" class="card p-3">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <img class="img-cover rounded" src="{{ manga.coverUrl ?? asset('img/cover-placeholder.png') }}" alt="{{ manga.title }}">
+            </div>
+            <div class="col-md-8">
+                <h1 itemprop="name" class="h3">{{ manga.title }}</h1>
+                <div class="text-muted small">
+                    {{ manga.authors ?? '—' }} • {{ manga.status ?? '—' }}
+                </div>
+                <p class="mt-2" itemprop="description">{{ manga.synopsis }}</p>
+                {% if manga.links %}
+                    <div class="d-flex gap-2">
+                        {% if manga.links.read %}<a class="btn btn-primary btn-sm" href="{{ manga.links.read }}" target="_blank">Lire</a>{% endif %}
+                        {% if manga.links.buy %}<a class="btn btn-outline-secondary btn-sm" href="{{ manga.links.buy }}" target="_blank">Acheter</a>{% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if manga.appearsIn|length %}
+            <h2 class="h6 mt-4">Apparaît dans</h2>
+            <ul class="list-unstyled mb-0">
+                {% for p in manga.appearsIn %}
+                    <li><a href="{{ path('blog_show', {slug:p.slug}) }}">{{ p.title }}</a></li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </article>
+{% endblock %}
