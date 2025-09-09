@@ -261,3 +261,13 @@ Fix : lien “Mes articles” dans le menu profil → utilise la route app_profi
 > - Taille logo : `--logo-h`, `--footer-logo-h` (dans `app.css`).
 > - Couleur logo en header : `.navbar .brand-logo { --ink:#fff; --accent:#fff; }`.
 > - Couleurs du thème : `:root { --brand … }` dans `app.css`.
+
+Fix: injection repo dans Dashboard, suppression des imports erronés.
+
+Fix: Post référence le bon repository.
+
+Feat: amélioration page article (cover 16:9, SEO, réactions, watchlist).
+
+Feat: spoilers dans commentaires avec flou + message d’aide persistant.
+
+Refactor: routes et templates Post admin harmonisés.
