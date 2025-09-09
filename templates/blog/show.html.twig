@@ -1,12 +1,80 @@
 {# templates/blog/show.html.twig #}
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ post.title }} — MangaBlog{% endblock %}
+{% set rxCounts = rxCounts|default({}) %}
+{% set rxMine   = rxMine|default([]) %}
+{% set related  = related|default([]) %}
+{% set comments = comments|default([]) %}
+
+{% block title %}{{ post.title }} — KamiManga{% endblock %}
+
+{% block meta %}
+    {{ parent() }}
+    {% set cover = post.cover ?: asset('img/og-fallback.jpg') %}
+    {% set desc  = post.content|striptags|replace({'&nbsp;':' '})|u.truncate(160, '…') %}
+
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="{{ post.title }}">
+    <meta property="og:description" content="{{ desc }}">
+    <meta property="og:url" content="{{ absolute_url(path('blog_show', {slug: post.slug})) }}">
+    <meta property="og:image" content="{{ absolute_url(cover) }}">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ post.title }}">
+    <meta name="twitter:description" content="{{ desc }}">
+    <meta name="twitter:image" content="{{ absolute_url(cover) }}">
+
+    {# JSON-LD #}
+    {% set cover         = post.cover ?: asset('img/og-fallback.jpg') %}
+    {% set datePublished = post.publishedAt ?? null %}
+    {% set dateModified  = (post.updatedAt is defined and post.updatedAt) ? post.updatedAt : datePublished %}
+
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          "headline": {{ post.title|json_encode|raw }},
+      "datePublished": "{{ datePublished ? datePublished|date('c') : '' }}",
+      "dateModified": "{{ dateModified ? dateModified|date('c') : '' }}",
+      "url": "{{ absolute_url(path('blog_show', {slug: post.slug})) }}",
+      "image": ["{{ absolute_url(cover) }}"],
+      "wordCount": {{ post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length }},
+      "keywords": [{% for t in post.tags %}{{ t.name|json_encode|raw }}{% if not loop.last %},{% endif %}{% endfor %}],
+      "author": {"@type":"Person","name":"{{ post.author ? post.author.displayName : 'KamiManga' }}"},
+      "publisher": {"@type":"Organization","name":"KamiManga"}
+    }
+    </script>
+{% endblock %}
+
+{% block styles %}
+    {{ parent() }}
+    <style>
+        /* --- Spoilers --- */
+        .spoiler{
+            position: relative;
+            filter: blur(6px);
+            transition: filter .2s ease, background-color .2s ease;
+            cursor: pointer;
+            background: rgba(0,0,0,.06);
+            border-radius: .25rem;
+            padding: .05rem .25rem;
+            outline: none;
+        }
+        .spoiler:focus{ box-shadow: 0 0 0 .2rem rgba(255,87,34,.25); }
+        .spoiler.revealed{ filter: none; background: transparent; }
+
+        /* --- Cover ratio fallback pour navigateurs sans aspect-ratio --- */
+        @supports not (aspect-ratio: 16/9){
+            .cover{ position:relative; height:0; padding-top: calc(100% / (16/9)); }
+            .cover-img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+        }
+    </style>
+{% endblock %}
 
 {% block body %}
-    {# ===========================
-       Fil d’Ariane
-       =========================== #}
+    <div class="read-progress" id="readProgress"></div>
+
+    {# Fil d’Ariane #}
     {% set crumbs = [
         { label: 'Accueil', url: path('app_home') },
         { label: 'Blog',    url: path('blog_index', app.request.query.all) }
@@ -20,30 +88,20 @@
     {% set crumbs = crumbs|merge([{ label: post.title }]) %}
     {% include '_partials/_breadcrumb.html.twig' with { items: crumbs } only %}
 
-    {# ===========================
-       Article
-       =========================== #}
     <article class="bg-white p-4 border rounded mb-4" itemscope itemtype="https://schema.org/Article">
         <header class="mb-3">
             <h1 class="h3 mb-1" itemprop="headline">{{ post.title }}</h1>
 
             <div class="text-muted small d-flex flex-wrap align-items-center gap-2">
-                {# Date #}
                 <time datetime="{{ (post.publishedAt ?? 'now')|date('c') }}" itemprop="datePublished">
                     {{ post.publishedAt ? post.publishedAt|date('d/m/Y H:i') : 'Brouillon' }}
                 </time>
-
-                {# Auteur (si disponible) #}
                 {% if post.author is defined and post.author %}
                     • <span itemprop="author">{{ post.author.displayName ?? post.author.userIdentifier }}</span>
                 {% endif %}
-
-                {# Lecture estimée #}
-                {% set words   = post.content|default('')|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
+                {% set words = post.content|default('')|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
                 {% set minutes = (words / 200)|round(0, 'ceil') %}
                 • ⏱ {{ minutes ?: 1 }} min
-
-                {# Catégorie #}
                 {% if post.category %}
                     • <a class="link-secondary text-decoration-none"
                          href="{{ path('blog_index', app.request.query.all|merge({'category': post.category.id, 'page': 1})) }}">
@@ -52,7 +110,6 @@
                 {% endif %}
             </div>
 
-            {# Tags #}
             {% if post.tags|length %}
                 <div class="mt-2 d-flex flex-wrap gap-1">
                     {% for t in post.tags %}
@@ -64,32 +121,29 @@
                 </div>
             {% endif %}
 
-            {# Watchlist #}
             <div class="mt-2">
                 {% if app.user %}
-                    {{ include('watchlist/_toggle_button.html.twig', { post: post, inList: inList }) }}
+                    {{ include('watchlist/_toggle_button.html.twig', { post: post, inList: inList|default(false) }) }}
                 {% else %}
                     <a class="btn btn-sm btn-outline-primary" href="{{ path('app_login') }}">Ajouter à ma liste</a>
                 {% endif %}
             </div>
-
-
         </header>
 
         {# Cover #}
         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-        <img
-            src="{{ coverUrl }}"
-            class="img-cover mb-3 w-100"
-            alt="Couverture : {{ post.title }}"
-            loading="lazy"
-            decoding="async"
-            itemprop="image"
-        >
+        <figure class="cover mb-3">
+            <img src="{{ coverUrl }}" alt="Couverture : {{ post.title }}" class="cover-img" loading="lazy" decoding="async">
+        </figure>
 
-        {# Contenu #}
+        {# Contenu avec support [spoiler]...[/spoiler] #}
+        {% set _content_txt  = (post.content ?? '')|e %}
+        {% set _content_html = _content_txt|replace({
+            '[spoiler]':'<span class="spoiler" tabindex="0" role="button" aria-label="Afficher le spoiler">',
+            '[/spoiler]':'</span>'
+        }) %}
         <div class="content" style="white-space: pre-line;" itemprop="articleBody">
-            {{ post.content }}
+            {{ _content_html|raw }}
         </div>
 
         {# Partage #}
@@ -98,15 +152,12 @@
             <a class="btn btn-sm btn-outline-secondary"
                href="https://twitter.com/intent/tweet?url={{ pageUrl|url_encode }}&text={{ post.title|url_encode }}"
                target="_blank" rel="noopener">Partager sur X</a>
-
             <a class="btn btn-sm btn-outline-secondary"
                href="https://www.facebook.com/sharer/sharer.php?u={{ pageUrl|url_encode }}"
                target="_blank" rel="noopener">Facebook</a>
-
             <a class="btn btn-sm btn-outline-secondary"
                href="https://www.linkedin.com/sharing/share-offsite/?url={{ pageUrl|url_encode }}"
                target="_blank" rel="noopener">LinkedIn</a>
-
             <a class="btn btn-sm btn-outline-secondary"
                href="mailto:?subject={{ post.title|url_encode }}&body={{ pageUrl|url_encode }}">Email</a>
         </div>
@@ -116,19 +167,17 @@
         </div>
     </article>
 
-    {# ===========================
-       Articles liés
-       =========================== #}
-    {% set related = related|default([]) %}
+    {# À lire ensuite (liés) #}
     {% if related|length %}
-        <h2 class="h6 mt-4">Dans la même catégorie</h2>
+        <h2 class="h6 mt-4">À lire ensuite</h2>
         <div class="row row-cols-1 row-cols-md-3 g-3">
             {% for r in related %}
                 <div class="col">
                     <a class="text-decoration-none" href="{{ path('blog_show', { slug: r.slug }) }}">
                         <div class="card shadow-sm h-100 reveal" data-animate="up">
                             {% set rCover = r.cover ?: asset('img/cover-placeholder.png') %}
-                            <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}" loading="lazy" decoding="async">
+                            <img src="{{ rCover }}" class="card-img-top" alt="Couverture : {{ r.title }}"
+                                 loading="lazy" decoding="async">
                             <div class="card-body">
                                 <div class="small text-muted mb-1">
                                     {{ r.category.name ?? '—' }} • {{ r.publishedAt ? r.publishedAt|date('Y-m-d') : '—' }}
@@ -142,34 +191,23 @@
         </div>
     {% endif %}
 
-    {# ===========================
-       Réactions
-       =========================== #}
-    {# Réactions #}
     {# Réactions #}
     <div id="reactions" class="d-flex gap-2 align-items-center my-3">
         {% set emojis = {'fire':'🔥','lol':'😂','cry':'😭','wow':'🤯'} %}
         {% for kind, emoji in emojis %}
-            <button
-                type="button"
-                class="btn btn-sm btn-light reaction {{ kind in rxMine ? 'active' : '' }}"
-                data-kind="{{ kind }}"
-                data-url="{{ path('reaction_toggle', {id: post.id}) }}"
-                aria-pressed="{{ kind in rxMine ? 'true' : 'false' }}">
+            <button type="button"
+                    class="btn btn-sm btn-light reaction {{ kind in rxMine ? 'active' : '' }}"
+                    data-kind="{{ kind }}"
+                    data-url="{{ path('reaction_toggle', {id: post.id}) }}"
+                    aria-pressed="{{ kind in rxMine ? 'true' : 'false' }}">
                 <span class="me-1">{{ emoji }}</span>
                 <span class="count">{{ rxCounts[kind]|default(0) }}</span>
             </button>
         {% endfor %}
     </div>
 
-
-
-    {# ===========================
-       Commentaires
-       =========================== #}
+    {# Commentaires #}
     <h2 class="h5 my-3">Commentaires</h2>
-
-    {% set comments = comments|default([]) %}
     {% if comments is empty %}
         <p class="text-muted">Aucun commentaire approuvé pour le moment.</p>
     {% else %}
@@ -178,17 +216,18 @@
                 <div class="p-3 border rounded bg-white">
                     <div class="small text-muted mb-2">
                         {{ c.createdAt|date('Y-m-d H:i') }} —
-                        {% if c.author %}
-                            {{ c.author.displayName ?? c.author.userIdentifier }}
-                        {% else %}
-                            Anonyme
-                        {% endif %}
+                        {{ c.author ? (c.author.displayName ?? c.author.userIdentifier) : 'Anonyme' }}
                     </div>
 
-                    {# Conversion légère des balises [spoiler]...[/spoiler] #}
-                    {% set txt = c.content|e %}
-                    {% set html = txt|replace({'[spoiler]':'<span class="spoiler">','[/spoiler]':'</span>'}) %}
-                    <div style="white-space: pre-line">{{ html|raw }}</div>
+                    {# Contenu du commentaire avec spoiler cliquable #}
+                    <div class="comment-body" style="white-space: pre-line;">
+                        {% set txt  = c.content|e %} {# on échappe d'abord #}
+                        {% set html = txt|replace({
+                            '[spoiler]':'<span class="spoiler" tabindex="0" role="button" aria-label="Afficher le spoiler">',
+                            '[/spoiler]':'</span>'
+                        }) %}
+                        {{ html|raw }}
+                    </div>
 
                     {% if is_granted('ROLE_ADMIN') %}
                         <div class="mt-2">
@@ -199,10 +238,16 @@
             {% endfor %}
         </div>
     {% endif %}
+    {# Consigne spoiler (persistante) #}
+    <div class="callout callout-warning small" role="note">
+        💡 Astuce : utilisez <code>[spoiler]…[/spoiler]</code> pour cacher un passage.
+        Exemple : <code>[spoiler]Le héros meurt à la fin[/spoiler]</code>.
+        Cliquez pour révéler.
+    </div>
 
-    {# ===========================
-       Formulaire de commentaire / Reco
-       =========================== #}
+
+
+    {# Formulaire de commentaire / Reco #}
     {% if app.user and form is defined and form %}
         <div class="bg-white p-3 border rounded">
             <h3 class="h6">Laisser un commentaire</h3>
@@ -217,43 +262,23 @@
             <a class="btn btn-sm btn-outline-primary" href="{{ path('app_login') }}">Se connecter</a>
             ou <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_register') }}">Créer un compte</a>
         </div>
-
-        {% set reco = reco|default([]) %}
-        {% if reco|length %}
-            <h2 class="h6 mt-4">Recommandé pour vous</h2>
-            <div class="row row-cols-1 row-cols-md-3 g-3">
-                {% for r in reco %}
-                    {% set p = r.post ?? r %}
-                    <div class="col">
-                        <a class="card h-100 text-decoration-none" href="{{ path('blog_show', {slug: p.slug}) }}">
-                            <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy" decoding="async">
-                            <div class="card-body">
-                                <div class="fw-semibold">{{ p.title }}</div>
-                                <div class="small text-muted">{{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}</div>
-                            </div>
-                        </a>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
     {% endif %}
 {% endblock %}
 
 {% block scripts %}
     {{ parent() }}
+
     <script>
+        // Réactions
         (function () {
             const zone = document.getElementById('reactions');
             if (!zone) return;
             const token = '{{ csrf_token('react' ~ post.id) }}';
 
             zone.addEventListener('click', async (e) => {
-                const btn = e.target.closest('.reaction');
-                if (!btn) return;
-                e.preventDefault();                 // au cas où
-                const url  = btn.dataset.url;       // vient du data-url
+                const btn = e.target.closest('.reaction'); if (!btn) return;
+                const url  = btn.dataset.url;
                 const kind = btn.dataset.kind;
-
                 try {
                     const r = await fetch(url, {
                         method: 'POST',
@@ -264,46 +289,56 @@
                         },
                         body: JSON.stringify({ kind })
                     });
-
-                    if (r.redirected) { window.location = r.url; return; }
-                    if (!r.ok) { console.warn('reaction failed'); return; }
-
-                    const data = await r.json();
+                    if (r.redirected) { location.href = r.url; return; }
+                    if (!r.ok) return;
+                    const data = await r.json(); // { ok, counts:{}, active }
                     if (!data.ok) return;
 
-                    // MAJ compteurs (source = serveur)
+                    // MAJ compteurs
                     const counts = data.counts || {};
                     zone.querySelectorAll('.reaction').forEach(b => {
                         const k = b.dataset.kind;
                         const c = b.querySelector('.count');
-                        c.textContent = counts[k] ?? 0;
+                        if (c) c.textContent = counts[k] ?? 0;
                     });
 
-                    // MAJ état actif du bouton cliqué
+                    // MAJ état du bouton cliqué
                     const active = !!data.active;
                     btn.classList.toggle('active', active);
                     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-                } catch (err) {
-                    console.error(err);
-                }
+                } catch (err) { console.error(err); }
             });
         })();
     </script>
+
     <script>
-        (() => {
-            const btn = document.getElementById('btn-watch');
-            if (!btn) return;
-            btn.addEventListener('click', async () => {
-                const url = btn.dataset.url;
-                const token = btn.dataset.token;
-                const fd = new FormData(); fd.append('_token', token);
+        // Barre de progression de lecture
+        (function(){
+            const bar = document.getElementById('readProgress'); if(!bar) return;
+            const onScroll = () => {
+                const el = document.scrollingElement || document.documentElement;
+                const h  = el.scrollHeight - el.clientHeight;
+                const p  = h ? (el.scrollTop / h) * 100 : 0;
+                bar.style.width = p + '%';
+            };
+            onScroll(); addEventListener('scroll', onScroll, {passive:true});
+        })();
+    </script>
 
-                const r = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'fetch'} });
+    <script>
+        // Toggle watchlist (si le partial expose #btn-watch ou .js-watch)
+        (function(){
+            const btn = document.querySelector('#btn-watch, .js-watch'); if(!btn) return;
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const url = btn.dataset.url, token = btn.dataset.token;
+                const r = await fetch(url, {
+                    method:'POST',
+                    body: new URLSearchParams({'_token': token}),
+                    headers:{'X-Requested-With':'fetch'}
+                });
                 if (!r.ok) return;
-                const data = await r.json();
-                if (!data.ok) return;
-
-                // toggle style + libellé
+                const data = await r.json(); if (!data.ok) return;
                 const active = !!data.active;
                 btn.classList.toggle('btn-outline-primary', !active);
                 btn.classList.toggle('btn-success', active);
@@ -312,4 +347,20 @@
         })();
     </script>
 
+    <script>
+        // Spoilers (click + clavier)
+        document.addEventListener('click', (e) => {
+            const s = e.target.closest('.spoiler');
+            if (!s) return;
+            s.classList.toggle('revealed');
+        });
+        document.addEventListener('keydown', (e) => {
+            const s = e.target.closest?.('.spoiler');
+            if (!s) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                s.classList.toggle('revealed');
+            }
+        });
+    </script>
 {% endblock %}
