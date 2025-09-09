@@ -139,12 +139,32 @@ final class BlogController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        // $post est l'article courant
+        if ($post->getTags()->count() > 0) {
+            $dql = <<<DQL
+    SELECT p2 AS post, COUNT(t2.id) AS commonTags
+    FROM App\Entity\Post p2
+    JOIN p2.tags t2
+    WHERE p2 != :post AND t2 IN (:tags) AND p2.status = 'published'
+    GROUP BY p2.id
+    ORDER BY commonTags DESC, p2.publishedAt DESC
+    DQL;
+
+            $reco = $em->createQuery($dql)
+                ->setParameters(['post' => $post, 'tags' => $post->getTags()])
+                ->setMaxResults(6)
+                ->getResult();
+        } else {
+            $reco = [];
+        }
+
         return $this->render('blog/show.html.twig', [
             'post'     => $post,
             'comments' => $approved,
             'form'     => $formView,
             'related'  => $related,
             'trending' => $trending,
+            'reco'     => $reco,
         ]);
     }
 }

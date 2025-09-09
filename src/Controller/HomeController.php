@@ -8,6 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\Post;
+use App\Entity\Manga;
 
 class HomeController extends AbstractController
 {
@@ -96,6 +97,13 @@ class HomeController extends AbstractController
         shuffle($discover);
         $discover = array_slice($discover, 0, 6);
 
+        $featured = $em->getRepository(Manga::class)->createQueryBuilder('m')
+            ->where('m.featuredUntil IS NOT NULL AND m.featuredUntil >= :now')
+            ->setParameter('now', new \DateTimeImmutable())
+            ->orderBy('m.featuredUntil', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()->getOneOrNullResult();
+
         return $this->render('home/index.html.twig', [
             'latest' => $latest,
             'popularCategories' => $popularCategories,
@@ -103,6 +111,7 @@ class HomeController extends AbstractController
             'topTags' => $topTags,
             'heroCover' => $heroCover,
             'discover' => $discover,
+            'featured' => $featured,
         ]);
     }
 }
