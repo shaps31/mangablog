@@ -2,27 +2,26 @@
 
 namespace App\Controller;
 
+use App\Entity\Manga;
+use App\Entity\Post;
 use App\Repository\PostRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
-use App\Entity\Post;
-use App\Entity\Manga;
+use Symfony\Component\Routing\Attribute\Route;
 
-class HomeController extends AbstractController
+final class HomeController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
     #[Route('/home', name: 'app_home_legacy')]
     public function index(PostRepository $posts, EntityManagerInterface $em): Response
     {
-        // Derniers articles publiés
-        $latest = $posts->createQueryBuilder('p')
-            ->andWhere('p.status = :s')->setParameter('s', 'published')
-            ->orderBy('p.publishedAt', 'DESC')
-            ->setMaxResults(3)
-            ->getQuery()
-            ->getResult();
+        // Derniers articles publiés (3)
+        $latest = $posts->findBy(
+            ['status' => 'published'],
+            ['publishedAt' => 'DESC'],
+            3
+        );
 
         // Catégories populaires (scalaires)
         $popularCategories = $em->createQuery(
@@ -51,67 +50,65 @@ class HomeController extends AbstractController
             ->setMaxResults(6)
             ->getResult();
 
-        // ✅ Top tags (scalaires)
-        $topTags = $em->createQueryBuilder()
-            ->select('t.id AS id, t.name AS name, COUNT(p.id) AS total')
-            ->from(\App\Entity\Tag::class, 't')
-            ->leftJoin('t.posts', 'p', 'WITH', 'p.status = :s')
+        // Top tags (scalaires)
+        $topTags = $em->createQuery(
+            'SELECT t.id AS id, t.name AS name, COUNT(p.id) AS total
+             FROM App\Entity\Tag t
+             LEFT JOIN t.posts p WITH p.status = :s
+             GROUP BY t.id, t.name
+             ORDER BY total DESC'
+        )
             ->setParameter('s', 'published')
-            ->groupBy('t.id, t.name')
-            ->orderBy('total', 'DESC')
             ->setMaxResults(20)
-            ->getQuery()
             ->getArrayResult();
 
-
-        $latest = $em->getRepository(Post::class)
-            ->createQueryBuilder('p')
-            ->where('p.status = :s')
+        // Cover pour le hero : dernier article avec cover non nulle, sinon image locale
+        $withCover = $posts->createQueryBuilder('p')
+            ->andWhere('p.status = :s')->setParameter('s', 'published')
             ->andWhere('p.cover IS NOT NULL')
-            ->setParameter('s', 'published')
             ->orderBy('p.publishedAt', 'DESC')
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
 
+        $cover = $withCover?->getCover();
+        $heroCover = \filter_var($cover, FILTER_VALIDATE_URL) ? $cover : 'img/hero-cover.jpg';
 
-        // Si la cover du dernier article est une URL valide => on l’utilise
-        $cover = $latest?->getCover();
-        // Sinon on reste sur l’image locale "img/hero-cover.jpg"
-
-        $heroCover = filter_var($cover, FILTER_VALIDATE_URL)
-            ? $cover
-            : 'img/hero-cover.jpg';
+        // À découvrir (articles publiés aléatoires, en excluant les tendances)
         $discover = $em->createQuery(
             'SELECT p FROM App\Entity\Post p
-     WHERE p.status = :s
-     ORDER BY p.publishedAt DESC'
-        )->setParameter('s','published')
+             WHERE p.status = :s
+             ORDER BY p.publishedAt DESC'
+        )
+            ->setParameter('s', 'published')
             ->setMaxResults(30)
             ->getResult();
 
-// Exclure ceux déjà dans $trending si besoin
-        $trendingIds = array_map(fn($row) => is_array($row)? $row['post']->getId() : $row->getId(), $trending);
-        $discover = array_values(array_filter($discover, fn($p) => !in_array($p->getId(), $trendingIds, true)));
-
+        $trendingIds = array_map(fn ($row) => $row['post']->getId(), $trending);
+        $discover = array_values(array_filter(
+            $discover,
+            fn (Post $p) => !in_array($p->getId(), $trendingIds, true)
+        ));
         shuffle($discover);
         $discover = array_slice($discover, 0, 6);
 
+        // (optionnel) Manga mis en avant
         $featured = $em->getRepository(Manga::class)->createQueryBuilder('m')
             ->where('m.featuredUntil IS NOT NULL AND m.featuredUntil >= :now')
             ->setParameter('now', new \DateTimeImmutable())
             ->orderBy('m.featuredUntil', 'DESC')
             ->setMaxResults(1)
-            ->getQuery()->getOneOrNullResult();
+            ->getQuery()
+            ->getOneOrNullResult();
 
         return $this->render('home/index.html.twig', [
-            'latest' => $latest,
+            'latest'            => $latest,
             'popularCategories' => $popularCategories,
-            'trending' => $trending,
-            'topTags' => $topTags,
-            'heroCover' => $heroCover,
-            'discover' => $discover,
-            'featured' => $featured,
+            'trending'          => $trending,
+            'topTags'           => $topTags,
+            'heroCover'         => $heroCover,
+            'discover'          => $discover,
+            'featured'          => $featured,
         ]);
     }
 }

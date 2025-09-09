@@ -2,7 +2,6 @@
 // src/Controller/SitemapController.php
 namespace App\Controller;
 
-use App\Repository\PostRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -10,7 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class SitemapController extends AbstractController
 {
     #[Route('/sitemap.xml', name: 'app_sitemap', methods: ['GET'])]
-    public function index(PostRepository $posts): Response
+    public function index(PostController $posts): Response
     {
         $items = [];
         $items[] = ['loc' => $this->generateUrl('app_home', [], 0)];
