@@ -1,5 +1,7 @@
 <?php
 
+
+
 namespace App\Controller\Admin;
 
 use App\Repository\PostRepository;
@@ -15,10 +17,10 @@ class DashboardController extends AbstractController
 {
     #[Route('/admin', name: 'admin_dashboard')]
     public function index(
-        PostRepository $posts,
-        CategoryRepository $categories,
-        TagRepository $tags,
-        CommentRepository $comments,
+        PostRepository         $posts,
+        CategoryRepository     $categories,
+        TagRepository          $tags,
+        CommentRepository      $comments,
         EntityManagerInterface $em,
     ): Response {
         // ----- Compteurs globaux

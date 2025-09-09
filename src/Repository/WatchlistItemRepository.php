@@ -35,4 +35,15 @@ class WatchlistItemRepository extends ServiceEntityRepository
             ->orderBy('w.createdAt', 'DESC')
             ->getQuery()->getResult();
     }
+
+    public function findPostIdsForUser(\App\Entity\User $user): array
+    {
+        $rows = $this->createQueryBuilder('w')
+            ->select('IDENTITY(w.post) AS id')
+            ->andWhere('w.user = :u')->setParameter('u', $user)
+            ->getQuery()->getArrayResult();
+
+        return array_map(fn($r) => (int)$r['id'], $rows);
+    }
+
 }
