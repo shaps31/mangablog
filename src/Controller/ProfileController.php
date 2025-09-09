@@ -5,13 +5,14 @@ namespace App\Controller;
 use App\Form\ProfileType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use App\Repository\PostRepository;
+
+
 
 #[Route('/profil', name: 'app_profile_')]
 class ProfileController extends AbstractController
@@ -113,31 +114,38 @@ class ProfileController extends AbstractController
         imagedestroy($dstImg);
     }
 
-    #[Route('/me/posts', name: 'app_my_posts')]
-    public function myPosts(PostRepository $repo, Request $req): Response
+    #[Route('/me/posts', name: 'app_my_posts', methods: ['GET'])]
+    public function myPosts(Request $req, PostRepository $posts): Response
     {
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-        $page = max(1, (int)$req->query->get('page', 1));
+
+        $page  = max(1, (int) $req->query->get('page', 1));
         $limit = 9;
 
-        $qb = $repo->createQueryBuilder('p')
+        $qb = $posts->createQueryBuilder('p')
             ->andWhere('p.author = :u')->setParameter('u', $this->getUser())
             ->orderBy('p.publishedAt', 'DESC')
-            ->addOrderBy('p.id', 'DESC')
-            ->setFirstResult(($page-1)*$limit)
-            ->setMaxResults($limit);
+            ->addOrderBy('p.id', 'DESC');
 
-        $posts = $qb->getQuery()->getResult();
-
-        // total
-        $total = (int)$repo->createQueryBuilder('p')
+        $total = (int) (clone $qb)
             ->select('COUNT(p.id)')
-            ->andWhere('p.author = :u')->setParameter('u', $this->getUser())
+            ->resetDQLPart('orderBy')
             ->getQuery()->getSingleScalarResult();
 
-        $pages = max(1, (int)ceil($total / $limit));
+        $rows = $qb->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
 
-        return $this->render('profile/my_posts.html.twig', compact('posts','page','pages','total'));
+        $pages = max(1, (int) ceil($total / $limit));
+
+        return $this->render('profile/my_posts.html.twig', [
+            'posts' => $rows,
+            'page'  => $page,
+            'pages' => $pages,
+            'total' => $total,
+        ]);
     }
+
 }
 
