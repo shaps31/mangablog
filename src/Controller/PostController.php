@@ -1,226 +1,231 @@
 <?php
 
-namespace App\Repository;
+namespace App\Controller;
 
 use App\Entity\Post;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use App\Form\PostType;
+use App\Repository\PostRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\{
+    Request, Response
+};
+use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-/**
- * @extends ServiceEntityRepository<Post>
- */
-class PostController extends ServiceEntityRepository
+#[Route('/admin/posts')]
+final class PostController extends AbstractController
 {
-    public function __construct(ManagerRegistry $registry)
-    {
-        parent::__construct($registry, Post::class);
-    }
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly SluggerInterface $slugger
+    ) {}
 
     /**
-     * Recherche des articles publiés avec filtres optionnels (liste complète, non paginée).
-     *
-     * @return Post[]
+     * Liste des articles.
+     * - Admin : tous
+     * - User : uniquement ses articles
      */
-    public function searchPublished(string $q = '', int $categoryId = 0, int $tagId = 0): array
+    #[Route('', name: 'app_post_index', methods: ['GET'])]
+    public function index(Request $request, PostRepository $posts): Response
     {
-        $qb = $this->createQueryBuilder('p')
+        $page    = max(1, (int) $request->query->get('page', 1));
+        $perPage = 10;
+
+        $qb = $posts->createQueryBuilder('p')
             ->leftJoin('p.category', 'c')->addSelect('c')
-            ->leftJoin('p.tags', 't')->addSelect('t')
-            ->andWhere('p.status = :pub')->setParameter('pub', 'published')
-            ->orderBy('p.publishedAt', 'DESC');
+            ->leftJoin('p.author', 'a')->addSelect('a')
+            ->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC');
 
-        if ($q !== '') {
-            $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
-                ->setParameter('q', '%'.$q.'%');
+        if (!$this->isGranted('ROLE_ADMIN')) {
+            $qb->andWhere('p.author = :me')->setParameter('me', $this->getUser());
         }
 
-        if ($categoryId > 0) {
-            $qb->andWhere('c.id = :cid')->setParameter('cid', $categoryId);
-        }
-
-        if ($tagId > 0) {
-            $qb->andWhere('t.id = :tid')->setParameter('tid', $tagId);
-        }
-
-        return $qb->getQuery()->getResult();
-    }
-
-    public function countPublishedBetween(\DateTimeInterface $from, \DateTimeInterface $to): int
-    {
-        return (int) $this->createQueryBuilder('p')
-            ->select('COUNT(p.id)')
-            ->where('p.status = :status')
-            ->andWhere('p.publishedAt BETWEEN :from AND :to')
-            ->setParameter('status', 'published')
-            ->setParameter('from', $from)
-            ->setParameter('to', $to)
-            ->getQuery()
-            ->getSingleScalarResult();
-    }
-
-    /**
-     * @return array<int, array{category: string, total: string}>
-     */
-    public function countByCategoryBetween(\DateTimeInterface $from, \DateTimeInterface $to): array
-    {
-        return $this->createQueryBuilder('p')
-            ->select('c.name AS category, COUNT(p.id) AS total')
-            ->leftJoin('p.category', 'c')
-            ->where('p.status = :status')
-            ->andWhere('p.publishedAt BETWEEN :from AND :to')
-            ->setParameter('status', 'published')
-            ->setParameter('from', $from)
-            ->setParameter('to', $to)
-            ->groupBy('c.id')
-            ->orderBy('total', 'DESC')
-            ->getQuery()
-            ->getArrayResult();
-    }
-
-    /**
-     * Recherche **paginée** des articles publiés avec filtres.
-     *
-     * @return array{
-     *   items: array,
-     *   total: int,
-     *   page: int,
-     *   perPage: int,
-     *   pages: int
-     * }
-     */
-    public function searchPublishedPaginated(
-        ?string $q,
-        ?int $categoryId,
-        ?int $tagId,
-        int $page,
-        int $perPage = 5
-    ): array {
-        $qb = $this->createQueryBuilder('p')
-            ->andWhere('p.status = :published')
-            ->setParameter('published', 'published');
-
-        if ($q) {
+        // (option) petit filtre search/status
+        if ($q = trim((string) $request->query->get('q', ''))) {
             $qb->andWhere('(LOWER(p.title) LIKE :q OR LOWER(p.content) LIKE :q)')
                 ->setParameter('q', '%'.mb_strtolower($q).'%');
         }
-
-        if ($categoryId) {
-            $qb->andWhere('p.category = :cid')->setParameter('cid', $categoryId);
+        if ($st = $request->query->get('status')) {
+            $qb->andWhere('p.status = :st')->setParameter('st', $st);
         }
 
-        if ($tagId) {
-            // JOIN uniquement pour filtrer
-            $qb->join('p.tags', 't')->andWhere('t.id = :tid')->setParameter('tid', $tagId);
-        }
+        $countQb = (clone $qb)->select('COUNT(DISTINCT p.id)');
+        $total   = (int) $countQb->getQuery()->getSingleScalarResult();
 
-        $qb->orderBy('p.publishedAt', 'DESC')
-            ->addOrderBy('p.id', 'DESC')
-            ->distinct();
-
-        // Total AVANT pagination
-        $countQb = clone $qb;
-        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')->getQuery()->getSingleScalarResult();
-
-        // Résultats paginés
-        $offset = max(0, ($page - 1) * $perPage);
-        $items = $qb->setFirstResult($offset)
-            ->setMaxResults($perPage)
-            ->getQuery()
-            ->getResult();
-
-        return [
-            'items' => $items,
-            'total' => $total,
-            'page'  => $page,
-            'pages' => (int) ceil($total / $perPage),
-        ];
-    }
-
-    /**
-     * @return Post[]
-     */
-    public function findPublishedForExport(): array
-    {
-        return $this->createQueryBuilder('p')
-            ->leftJoin('p.category', 'c')->addSelect('c')
-            ->leftJoin('p.author', 'a')->addSelect('a')
-            ->where('p.status = :st')->setParameter('st', 'published')
-            ->orderBy('p.publishedAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    public function findRelated(Post $post, int $limit = 3): array
-    {
-        $qb = $this->createQueryBuilder('p')
-            ->andWhere('p.status = :s')->setParameter('s', 'published')
-            ->andWhere('p != :post')->setParameter('post', $post)
-            ->setMaxResults($limit);
-
-        if ($post->getTags()->count() > 0) {
-            $qb->leftJoin('p.tags', 't')
-                ->andWhere('p.category = :cat OR t IN (:tags)')
-                ->setParameter('cat', $post->getCategory())
-                ->setParameter('tags', $post->getTags())
-                ->groupBy('p.id')
-                ->addOrderBy('COUNT(t)', 'DESC')
-                ->addOrderBy('p.publishedAt', 'DESC');
-        } else {
-            $qb->andWhere('p.category = :cat')->setParameter('cat', $post->getCategory())
-                ->orderBy('p.publishedAt', 'DESC');
-        }
-
-        return $qb->getQuery()->getResult();
-    }
-
-    /**
-     * Tri “Tendance” (30 jours) : réactions + commentaires approuvés
-     *
-     * @return array{items: array, total: int, page: int, pages: int}
-     */
-    public function findPublishedHot(
-        string $q = null,
-        ?int $catId = null,
-        ?int $tagId = null,
-        int $page = 1,
-        int $perPage = 12
-    ): array {
-        $since = new \DateTimeImmutable('-30 days');
-
-        $qb = $this->createQueryBuilder('p')
-            ->leftJoin('p.comments','c','WITH','c.status = :ok AND c.createdAt >= :since')
-            ->leftJoin('p.tags','t')
-            // join indépendant sur Reaction via condition
-            ->leftJoin('App\Entity\Reaction','r','WITH','r.post = p AND r.createdAt >= :since')
-            ->addSelect('(COUNT(DISTINCT r.id) + COUNT(DISTINCT c.id)) AS HIDDEN score')
-            ->andWhere('p.status = :pub')
-            ->setParameter('pub','published')
-            ->setParameter('ok','approved')
-            ->setParameter('since',$since);
-
-        if ($q)     { $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')->setParameter('q','%'.$q.'%'); }
-        if ($catId) { $qb->andWhere('p.category = :cat')->setParameter('cat',$catId); }
-        if ($tagId) { $qb->andWhere('t.id = :tag')->setParameter('tag',$tagId); }
-
-        $qb->groupBy('p.id')
-            ->orderBy('score','DESC')
-            ->addOrderBy('p.publishedAt','DESC');
-
-        // total
-        $countQb = clone $qb;
-        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')
-            ->resetDQLPart('orderBy')
-            ->getQuery()->getSingleScalarResult();
-
-        $items = $qb->setFirstResult(($page-1)*$perPage)
+        $items = $qb->setFirstResult(($page - 1) * $perPage)
             ->setMaxResults($perPage)
             ->getQuery()->getResult();
 
-        return [
-            'items' => $items,
-            'total' => $total,
+        return $this->render('post/index.html.twig', [
+            'posts' => $items,
             'page'  => $page,
-            'pages' => max(1,(int)ceil($total/$perPage)),
-        ];
+            'pages' => max(1, (int) ceil($total / $perPage)),
+            'total' => $total,
+            'q'     => $q,
+            'status'=> $st,
+        ]);
+    }
+
+    /**
+     * Création d’un article.
+     * Accessible à tout utilisateur connecté (ROLE_USER).
+     */
+    #[Route('/new', name: 'app_post_new', methods: ['GET','POST'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY')]
+    public function new(Request $request): Response
+    {
+        $post = new Post();
+        $post->setAuthor($this->getUser());
+
+        $form = $this->createForm(PostType::class, $post);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            // Slug auto si vide
+            if (!$post->getSlug()) {
+                $post->setSlug($this->slugify($post->getTitle()));
+            }
+
+            // publishedAt si publié
+            if ($post->getStatus() === 'published' && !$post->getPublishedAt()) {
+                $post->setPublishedAt(new \DateTimeImmutable());
+            }
+            if ($post->getStatus() !== 'published') {
+                $post->setPublishedAt(null);
+            }
+
+            $this->em->persist($post);
+            $this->em->flush();
+
+            $this->addFlash('success', 'Article créé.');
+            return $this->redirectToRoute('app_post_index');
+        }
+
+        return $this->render('post/new.html.twig', [
+            'post' => $post,
+            'form' => $form,
+        ]);
+    }
+
+    #[Route('/{id}', name: 'app_post_show', methods: ['GET'])]
+    public function show(Post $post): Response
+    {
+        return $this->render('post/show.html.twig', [
+            'post' => $post,
+        ]);
+    }
+
+    /**
+     * Édition d’un article.
+     * - Admin : tout
+     * - User : seulement ses articles
+     */
+    #[Route('/{id}/edit', name: 'app_post_edit', methods: ['GET','POST'])]
+    public function edit(Request $request, Post $post): Response
+    {
+        $this->denyUnlessOwnerOrAdmin($post);
+
+        $form = $this->createForm(PostType::class, $post);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+
+            // Re-slugger si slug vide ou si tu veux reslugger quand le titre change (ici on fait que si vide)
+            if (!$post->getSlug() && $post->getTitle()) {
+                $post->setSlug($this->slugify($post->getTitle()));
+            }
+
+            // Gestion publishedAt selon status
+            if ($post->getStatus() === 'published' && !$post->getPublishedAt()) {
+                $post->setPublishedAt(new \DateTimeImmutable());
+            }
+            if ($post->getStatus() !== 'published') {
+                $post->setPublishedAt(null);
+            }
+
+            $this->em->flush();
+            $this->addFlash('success', 'Article mis à jour.');
+            return $this->redirectToRoute('app_post_index');
+        }
+
+        return $this->render('post/edit.html.twig', [
+            'post' => $post,
+            'form' => $form,
+        ]);
+    }
+
+    /**
+     * Suppression.
+     */
+    #[Route('/{id}', name: 'app_post_delete', methods: ['POST'])]
+    public function delete(Request $request, Post $post): Response
+    {
+        $this->denyUnlessOwnerOrAdmin($post);
+
+        if (!$this->isCsrfTokenValid('delete'.$post->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('app_post_index');
+        }
+
+        $this->em->remove($post);
+        $this->em->flush();
+
+        $this->addFlash('success', 'Article supprimé.');
+        return $this->redirectToRoute('app_post_index');
+    }
+
+    /**
+     * Toggle publication (published <-> draft).
+     */
+    #[Route('/{id}/toggle', name: 'app_post_toggle', methods: ['POST'])]
+    public function toggle(Request $request, Post $post): Response
+    {
+        $this->denyUnlessOwnerOrAdmin($post);
+
+        if (!$this->isCsrfTokenValid('toggle'.$post->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Jeton CSRF invalide.');
+            return $this->redirectToRoute('app_post_index');
+        }
+
+        if ($post->getStatus() === 'published') {
+            $post->setStatus('draft');
+            $post->setPublishedAt(null);
+            $msg = 'Article dépublié.';
+        } else {
+            $post->setStatus('published');
+            if (!$post->getPublishedAt()) {
+                $post->setPublishedAt(new \DateTimeImmutable());
+            }
+            $msg = 'Article publié.';
+        }
+
+        $this->em->flush();
+        $this->addFlash('success', $msg);
+
+        return $this->redirect($request->headers->get('referer') ?: $this->generateUrl('app_post_index'));
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private function denyUnlessOwnerOrAdmin(Post $post): void
+    {
+        if ($this->isGranted('ROLE_ADMIN')) {
+            return;
+        }
+        if ($post->getAuthor() !== $this->getUser()) {
+            throw $this->createAccessDeniedException();
+        }
+    }
+
+    private function slugify(?string $title): string
+    {
+        $t = trim((string) $title);
+        if ($t === '') return '';
+        return strtolower($this->slugger->slug($t)->toString());
     }
 }
