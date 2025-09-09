@@ -14,17 +14,20 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
-
+use App\Repository\ReactionRepository;
 
 #[Route('/post')]
 #[IsGranted('ROLE_ADMIN')]
 final class PostController extends AbstractController
 {
     #[Route('/post', name: 'app_post_index', methods: ['GET'])]
-    public function index(Request $request, PostRepository $postRepository): Response
-    {
-        $page     = max(1, (int) $request->query->get('page', 1));
-        $perPage  = max(5, min(50, (int) $request->query->get('size', 15)));
+    public function index(
+        Request $request,
+        PostRepository $postRepository,
+        ReactionRepository $reactionRepo
+    ): Response {
+        $page    = max(1, (int) $request->query->get('page', 1));
+        $perPage = max(5, min(50, (int) $request->query->get('size', 15)));
 
         $qb = $postRepository->createQueryBuilder('p')
             ->orderBy('p.publishedAt', 'DESC')
@@ -40,14 +43,31 @@ final class PostController extends AbstractController
 
         $pages = max(1, (int) ceil($total / $perPage));
 
+        // --- Réactions par post (clé = postId) -------------------------------
+        $ids = [];
+        foreach ($posts as $p) {
+            // éviter les dupes au cas où
+            $id = method_exists($p, 'getId') ? $p->getId() : null;
+            if ($id !== null) { $ids[$id] = $id; }
+        }
+
+        $rxTotals = [];
+        if (!empty($ids)) {
+            // Attendu: tableau associatif [postId => ['total' => int, ...]]
+            $rxTotals = $reactionRepo->totalsForPostIds(array_values($ids));
+        }
+        // --------------------------------------------------------------------
+
         return $this->render('post/index.html.twig', [
-            'posts'   => $posts,
-            'page'    => $page,
-            'pages'   => $pages,
-            'total'   => $total,
-            'perPage' => $perPage,
+            'posts'     => $posts,
+            'page'      => $page,
+            'pages'     => $pages,
+            'total'     => $total,
+            'perPage'   => $perPage,
+            'rxTotals'  => $rxTotals, // <-- dispo dans Twig
         ]);
     }
+
 
     #[Route('/new', name: 'app_post_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response

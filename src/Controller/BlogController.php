@@ -6,7 +6,9 @@ use App\Entity\Comment;
 use App\Repository\PostRepository;
 use App\Repository\CategoryRepository;
 use App\Repository\CommentRepository;
+use App\Repository\ReactionRepository;
 use App\Repository\TagRepository;
+use App\Repository\WatchlistItemRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,18 +22,18 @@ final class BlogController extends AbstractController
         Request $request,
         PostRepository $posts,
         CategoryRepository $categories,
-        TagRepository $tagRepository
+        TagRepository $tagRepository,ReactionRepository $reactionRepo
     ): Response {
         // 🔎 Filtres depuis l’URL
         $q     = trim((string) $request->query->get('q', ''));
-        $catId = (int) $request->query->get('category', 0) ?: null; // 0 => null (pas de filtre)
-        $tagId = (int) $request->query->get('tag', 0) ?: null;      // 0 => null (pas de filtre)
+        $catId = (int) $request->query->get('category', 0) ?: null;
+        $tagId = (int) $request->query->get('tag', 0) ?: null;
         $page  = max(1, (int) $request->query->get('page', 1));
 
-        // 🔧 Nombre d’articles par page (cartes)
+        // 🔧 Nombre d’articles par page
         $perPage = 3;
 
-        // 📄 Recherche paginée (repo doit accepter le paramètre $tagId)
+        // 📄 Recherche paginée
         $pager = $posts->searchPublishedPaginated(
             q: $q,
             categoryId: $catId,
@@ -50,24 +52,24 @@ final class BlogController extends AbstractController
         $totalMonth  = $posts->countPublishedBetween($start, $end);
         $totalsByCat = $posts->countByCategoryBetween($start, $end);
 
-        // 🎨 Rendu
+        $items = $pager['items'];
+        $ids   = array_map(fn($p) => $p->getId(), $items);
+        $rxTotals = $reactionRepo->totalsForPostIds($ids);
+
         return $this->render('blog/index.html.twig', [
-            // liste + pagination
             'posts'         => $pager['items'],
             'totalResults'  => $pager['total'],
             'page'          => $pager['page'],
             'pages'         => $pager['pages'],
-
-            // filtres (pour formulaire + pastilles)
             'q'             => $q,
-            'category'      => $catId,      // id de catégorie sélectionné (ou null)
-            'tag'           => $tagId,      // id de tag sélectionné (ou null)
+            'category'      => $catId,
+            'tag'           => $tagId,
             'categories'    => $allCategories,
             'allTags'       => $allTags,
-
-            // stats bandeau
             'totalMonth'    => $totalMonth,
             'totalsByCat'   => $totalsByCat,
+            'rxTotals'      => $rxTotals,
+
         ]);
     }
 
@@ -77,6 +79,7 @@ final class BlogController extends AbstractController
         PostRepository $posts,
         CommentRepository $commentsRepo,
         EntityManagerInterface $em,
+        WatchlistItemRepository $watchlistRepo,   // ✅ injection du repo watchlist
         string $slug
     ): Response {
         // 🔎 Article publié correspondant au slug
@@ -95,7 +98,6 @@ final class BlogController extends AbstractController
             fn ($p) => $p->getId() !== $post->getId()
         );
         $related = array_slice($related, 0, 3);
-
 
         // 💬 Commentaires approuvés
         $approved = $commentsRepo->findBy(
@@ -125,8 +127,10 @@ final class BlogController extends AbstractController
                 return $this->redirectToRoute('blog_show', ['slug' => $post->getSlug()]);
             }
             $formView = $form->createView();
-        }    $related = $posts->findRelated($post, 3);
-             $trending = $posts->createQueryBuilder('p')
+        }
+
+        // 🔥 Tendances (par nb de coms approuvés)
+        $trending = $posts->createQueryBuilder('p')
             ->leftJoin('p.comments', 'c')
             ->andWhere('p.status = :s')->setParameter('s', 'published')
             ->andWhere('(c.status IS NULL OR c.status = :approved)')
@@ -139,16 +143,16 @@ final class BlogController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        // $post est l'article courant
+        // 💡 Recommandations (tags en commun)
         if ($post->getTags()->count() > 0) {
             $dql = <<<DQL
-    SELECT p2 AS post, COUNT(t2.id) AS commonTags
-    FROM App\Entity\Post p2
-    JOIN p2.tags t2
-    WHERE p2 != :post AND t2 IN (:tags) AND p2.status = 'published'
-    GROUP BY p2.id
-    ORDER BY commonTags DESC, p2.publishedAt DESC
-    DQL;
+                SELECT p2 AS post, COUNT(t2.id) AS commonTags
+                FROM App\Entity\Post p2
+                JOIN p2.tags t2
+                WHERE p2 != :post AND t2 IN (:tags) AND p2.status = 'published'
+                GROUP BY p2.id
+                ORDER BY commonTags DESC, p2.publishedAt DESC
+            DQL;
 
             $reco = $em->createQuery($dql)
                 ->setParameters(['post' => $post, 'tags' => $post->getTags()])
@@ -157,36 +161,41 @@ final class BlogController extends AbstractController
         } else {
             $reco = [];
         }
+
         // --- Réactions : compte par type + réactions de l'utilisateur ---
         $rxKinds = ['fire','lol','cry','wow'];
 
-// Comptes par type
+        // Comptes par type
         $rows = $em->createQuery(
             'SELECT r.kind AS k, COUNT(r.id) AS c
-     FROM App\Entity\Reaction r
-     WHERE r.post = :post
-     GROUP BY r.kind'
+             FROM App\Entity\Reaction r
+             WHERE r.post = :post
+             GROUP BY r.kind'
         )->setParameter('post', $post)->getArrayResult();
 
         $rxCounts = array_fill_keys($rxKinds, 0);
         foreach ($rows as $row) {
-            $rxCounts[$row['k']] = (int)$row['c'];
+            $rxCounts[$row['k']] = (int) $row['c'];
         }
 
-// Réactions de l'utilisateur connecté
+        // Réactions de l'utilisateur
         $rxMine = [];
         if ($this->getUser()) {
             $mine = $em->createQuery(
                 'SELECT r.kind AS k
-         FROM App\Entity\Reaction r
-         WHERE r.post = :post AND r.user = :u'
-            )->setParameters(['post'=>$post, 'u'=>$this->getUser()])
+                 FROM App\Entity\Reaction r
+                 WHERE r.post = :post AND r.user = :u'
+            )->setParameters(['post' => $post, 'u' => $this->getUser()])
                 ->getArrayResult();
 
             $rxMine = array_map(fn($r) => $r['k'], $mine);
         }
 
-
+        // ✅ Watchlist : savoir si l’article est déjà dans la liste
+        $inList = false;
+        if ($this->getUser()) {
+            $inList = $watchlistRepo->isInList($this->getUser(), $post);
+        }
 
         return $this->render('blog/show.html.twig', [
             'post'     => $post,
@@ -198,7 +207,7 @@ final class BlogController extends AbstractController
             'rxCounts' => $rxCounts,
             'rxMine'   => $rxMine,
             'rxKinds'  => $rxKinds,
-
+            'inList'   => $inList,
         ]);
     }
 }

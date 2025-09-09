@@ -79,6 +79,8 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ path('app_profile_show') }}">Mon profil</a></li>
                         <li><a class="dropdown-item" href="{{ path('app_profile_app_my_posts') }}">Mes articles</a></li>
+                        <li><a class="dropdown-item" href="{{ path('watchlist_index') }}">Ma liste</a></li>
+
 
                         <li><a class="dropdown-item" href="{{ path('app_profile_edit') }}">Modifier</a></li>
                         {% if is_granted('ROLE_ADMIN') %}
@@ -141,6 +143,12 @@
 {% block scripts %}
     <script>
         setTimeout(() => { document.querySelectorAll('.alert').forEach(a => a.remove()); }, 4000);
+    </script>
+    <script>
+        document.addEventListener('click', (e) => {
+            const s = e.target.closest('.spoiler');
+            if (s) s.classList.toggle('revealed');
+        });
     </script>
 
     <script>

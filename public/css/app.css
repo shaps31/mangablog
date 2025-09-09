@@ -315,8 +315,12 @@ h1,h2,h3,.fw-bold{
 .brand-logo:hover .sparkle{ animation:twinkle .9s ease-in-out }
 @keyframes twinkle{ 0%{transform:scale(1)} 50%{transform:scale(1.35) rotate(20deg)} 100%{transform:scale(1)} }
 
-.spoiler { filter: blur(5px); cursor: pointer; transition: .2s; }
+
+/* Spoilers */
+.spoiler { filter: blur(5px); cursor: pointer; transition: filter .2s ease; }
 .spoiler.revealed { filter: none; }
+
+
 #reactions .reaction { display:inline-flex; align-items:center; gap:.25rem; }
 #reactions .reaction .count { font-weight:600; opacity:.85; }
 #reactions .reaction.active {

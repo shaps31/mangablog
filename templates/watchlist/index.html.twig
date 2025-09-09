@@ -1,0 +1,33 @@
+{% extends 'base.html.twig' %}
+{% block title %}Ma liste{% endblock %}
+
+{% block body %}
+    <h1 class="h4 mb-3">Ma liste</h1>
+
+    {% if items is empty %}
+        <p class="text-muted">Ta liste est vide pour l’instant.</p>
+    {% else %}
+        <div class="row row-cols-1 row-cols-md-3 g-3">
+            {% for w in items %}
+                {% set p = w.post %}
+                <div class="col">
+                    <div class="card h-100">
+                        <a href="{{ path('blog_show', { slug: p.slug }) }}" class="text-decoration-none">
+                            <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy">
+                            <div class="card-body">
+                                <div class="small text-muted mb-1">
+                                    {{ p.category ? p.category.name ~ ' • ' : '' }}
+                                    {{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}
+                                </div>
+                                <div class="fw-semibold">{{ p.title }}</div>
+                            </div>
+                        </a>
+                        <div class="card-footer text-end">
+                            {{ include('watchlist/_toggle_button.html.twig', { post: p, inList: true }) }}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

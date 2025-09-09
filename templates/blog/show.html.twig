@@ -67,14 +67,13 @@
             {# Watchlist #}
             <div class="mt-2">
                 {% if app.user %}
-                    <form method="post" action="{{ path('watchlist_toggle', {id: post.id}) }}" class="d-inline">
-                        <input type="hidden" name="_token" value="{{ csrf_token('watchlist' ~ post.id) }}">
-                        <button class="btn btn-sm btn-outline-primary">Ajouter à ma liste</button>
-                    </form>
+                    {{ include('watchlist/_toggle_button.html.twig', { post: post, inList: inList }) }}
                 {% else %}
                     <a class="btn btn-sm btn-outline-primary" href="{{ path('app_login') }}">Ajouter à ma liste</a>
                 {% endif %}
             </div>
+
+
         </header>
 
         {# Cover #}
@@ -290,4 +289,27 @@
             });
         })();
     </script>
+    <script>
+        (() => {
+            const btn = document.getElementById('btn-watch');
+            if (!btn) return;
+            btn.addEventListener('click', async () => {
+                const url = btn.dataset.url;
+                const token = btn.dataset.token;
+                const fd = new FormData(); fd.append('_token', token);
+
+                const r = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'fetch'} });
+                if (!r.ok) return;
+                const data = await r.json();
+                if (!data.ok) return;
+
+                // toggle style + libellé
+                const active = !!data.active;
+                btn.classList.toggle('btn-outline-primary', !active);
+                btn.classList.toggle('btn-success', active);
+                btn.textContent = active ? 'Dans ma liste ✓' : 'Ajouter à ma liste';
+            });
+        })();
+    </script>
+
 {% endblock %}

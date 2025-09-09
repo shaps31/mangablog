@@ -1,65 +1,74 @@
+{# templates/comment/show.html.twig #}
 {% extends 'base.html.twig' %}
+
 {% block title %}Commentaire #{{ comment.id }}{% endblock %}
 
 {% block body %}
-    <h1 class="h4 mb-3">Commentaire #{{ comment.id }}</h1>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h4 m-0">Commentaire #{{ comment.id }}</h1>
+        <a href="{{ path('app_comment_index') }}" class="btn btn-outline-secondary btn-sm">← Retour</a>
+    </div>
 
-    <table class="table table-sm align-middle bg-white border rounded">
-        <tr>
-            <th scope="row">ID</th>
-            <td>{{ comment.id }}</td>
-        </tr>
-        <tr>
-            <th scope="row">Auteur</th>
-            <td>
-                {% if comment.author %}
-                    {{ comment.author.displayName ?? comment.author.userIdentifier }}
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Article</th>
-            <td>
-                {% if comment.post %}
-                    <a href="{{ path('blog_show', { slug: comment.post.slug }) }}">{{ comment.post.title }}</a>
-                {% else %}
-                    —
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Créé le</th>
-            <td>{{ comment.createdAt ? comment.createdAt|date('Y-m-d H:i') : '—' }}</td>
-        </tr>
-        <tr>
-            <th scope="row">Statut</th>
-            <td>
-                {% set st = comment.status|default('pending') %}
-                {% if st == 'approved' %}
-                    <span class="badge text-bg-success">approuvé</span>
-                {% elseif st == 'rejected' %}
-                    <span class="badge text-bg-danger">rejeté</span>
-                {% else %}
-                    <span class="badge text-bg-warning text-dark">en attente</span>
-                {% endif %}
-            </td>
-        </tr>
-        <tr>
-            <th scope="row">Contenu</th>
-            <td><pre class="mb-0" style="white-space: pre-line">{{ comment.content }}</pre></td>
-        </tr>
-    </table>
+    <div class="card">
+        <div class="card-body">
+            <dl class="row mb-0">
+                <dt class="col-sm-3">Auteur</dt>
+                <dd class="col-sm-9">{{ comment.author ? (comment.author.displayName ?? comment.author.userIdentifier) : '—' }}</dd>
 
-    <div class="d-flex gap-2 mt-3">
-        <a class="btn btn-outline-secondary btn-sm" href="{{ path('app_comment_index') }}">↩︎ Retour</a>
-        <a class="btn btn-primary btn-sm" href="{{ path('app_comment_edit', {id: comment.id}) }}">Éditer</a>
+                <dt class="col-sm-3">Article</dt>
+                <dd class="col-sm-9">
+                    {% if comment.post %}
+                        <a href="{{ path('blog_show', { slug: comment.post.slug }) }}">{{ comment.post.title }}</a>
+                    {% else %}—{% endif %}
+                </dd>
 
-        {# ✅ Modération (POST + CSRF) #}
-        {{ include('comment/_moderate_buttons.html.twig', { comment: comment }) }}
+                <dt class="col-sm-3">Statut</dt>
+                <dd class="col-sm-9">
+                    {% if comment.status == 'approved' %}
+                        <span class="badge text-bg-success">approuvé</span>
+                    {% elseif comment.status == 'rejected' %}
+                        <span class="badge text-bg-danger">rejeté</span>
+                    {% else %}
+                        <span class="badge text-bg-warning text-dark">en attente</span>
+                    {% endif %}
+                </dd>
+
+                <dt class="col-sm-3">Créé le</dt>
+                <dd class="col-sm-9 text-muted">{{ comment.createdAt ? comment.createdAt|date('Y-m-d H:i') : '—' }}</dd>
+
+                <dt class="col-sm-3">Contenu</dt>
+                <dd class="col-sm-9"><pre class="mb-0" style="white-space:pre-wrap">{{ comment.content }}</pre></dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex flex-wrap gap-2 align-items-center" data-mod>
+        {# Modération #}
+        {% if comment.status == 'pending' %}
+            <form method="post" action="{{ path('app_comment_approve', {id: comment.id}) }}" class="d-inline">
+                <button type="submit" class="btn btn-success btn-sm js-mod-approve">Approuver</button>
+            </form>
+        {% else %}
+            <form method="post" action="{{ path('app_comment_reject', {id: comment.id}) }}" class="d-inline">
+                <button type="submit" class="btn btn-outline-secondary btn-sm js-mod-cancel">Annuler l’approbation</button>
+            </form>
+        {% endif %}
 
         {# Supprimer #}
         {{ include('comment/_delete_form.html.twig', { comment: comment }) }}
     </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script>
+        // Petite protection UX : évite les double-clics sur les boutons de modération
+        document.addEventListener('click', function (e) {
+            const box = e.target.closest('[data-mod]');
+            const btn = e.target.closest('.js-mod-approve, .js-mod-cancel');
+            if (!box || !btn) return;
+            btn.disabled = true;
+            setTimeout(() => btn.disabled = false, 1500);
+        });
+    </script>
 {% endblock %}

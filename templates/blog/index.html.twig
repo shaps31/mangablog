@@ -1,5 +1,6 @@
 {# templates/blog/index.html.twig #}
 {% extends 'base.html.twig' %}
+{% set rxTotals = rxTotals|default({}) %}
 
 {% block meta %}
     {{ parent() }}
@@ -153,31 +154,41 @@
     {# Liste des articles #}
     <div class="row row-cols-1 g-3">
         {% for post in posts %}
-            <div class="col">
-                <article class="card shadow-sm h-100 reveal" data-animate="up">
-                    <div class="card-body">
-                        <h2 class="h5 card-title mb-1">
-                            <a href="{{ path('blog_show', { slug: post.slug }) }}" class="stretched-link text-decoration-none">
-                                {{ post.title }}
-                            </a>
-                        </h2>
+        <div class="col">
+            <div class="card shadow-sm h-100 reveal" data-animate="up">
+                <div class="card-body">
 
-                        {# méta : date + temps de lecture #}
+                    {# TITRE + compteur #}
+                    <h2 class="h5 card-title mb-1">
+                        <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
+                    </h2>
+
+
+                    {# méta : date + temps de lecture #}
                         {% set words = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
                         {% set minutes = (words / 200)|round(0, 'ceil') %}
                         <div class="text-muted small mb-2">
                             <span aria-label="Publié le">{{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}</span>
-                            · <span aria-label="Temps de lecture">⏱ {{ minutes }} min</span>
+                            · <span aria-label="Temps de lecture">⏱ {{ minutes }} min • 🔥 {{ rxTotals[post.id]|default(0) }}</span>
                         </div>
 
                         {# cover #}
                         {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
+                    <div class="position-relative">
                         <img src="{{ coverUrl }}"
                              class="img-cover mb-2"
-                             alt="Couverture de l’article « {{ post.title }} »"
-                             loading="lazy" decoding="async" width="1200" height="630">
+                             alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
 
-                        {# Catégorie (badge-cat) cliquable #}
+                        {% set hot = rxTotals[post.id]|default(0) %}
+                        {% if hot > 0 %}
+                            <span class="hot-badge"
+                                  data-bs-toggle="tooltip"
+                                  title="Réactions des 30 derniers jours">🔥 {{ hot }}</span>
+                        {% endif %}
+                    </div>
+
+
+                    {# Catégorie (badge-cat) cliquable #}
                         {% if post.category %}
                             <div class="mb-2">
                                 <a class="badge badge-cat me-1"
@@ -264,3 +275,10 @@
         </nav>
     {% endif %}
 {% endblock %}
+        {% block scripts %}
+            {{ parent() }}
+            <script>
+                document.querySelectorAll('[data-bs-toggle="tooltip"]')
+                    .forEach(el => new bootstrap.Tooltip(el));
+            </script>
+        {% endblock %}

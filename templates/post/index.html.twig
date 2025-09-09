@@ -7,9 +7,12 @@
         <h1 class="h4 m-0">Articles</h1>
         <a href="{{ path('app_post_new') }}" class="btn btn-primary btn-sm">Nouvel article</a>
     </div>
+
     <p class="text-muted small mb-2">
         {{ total }} article(s) — page {{ page }}/{{ pages }}
     </p>
+
+    <input id="tbl-search" class="form-control form-control-sm mb-2" placeholder="Rechercher… (titre, slug)">
 
     <div class="table-responsive bg-white border rounded">
         <table class="table align-middle m-0">
@@ -28,15 +31,11 @@
             <tbody>
             {% for post in posts %}
                 {% set st = post.status|default('draft') %}
-                <tr>
+                <tr data-row="post">
                     <td class="text-nowrap">{{ post.id }}</td>
-                    <td class="text-truncate" style="max-width: 260px;">
-                        {{ post.title }}
-                    </td>
+                    <td class="text-truncate" style="max-width: 260px;">{{ post.title }}</td>
                     <td class="text-muted small">{{ post.slug }}</td>
-                    <td class="text-nowrap">
-                        {{ post.category ? post.category.name : '—' }}
-                    </td>
+                    <td class="text-nowrap">{{ post.category ? post.category.name : '—' }}</td>
                     <td>
                         {% if st == 'published' %}
                             <span class="badge text-bg-success">publié</span>
@@ -49,15 +48,10 @@
                     <td class="text-nowrap">
                         {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}
                     </td>
-                    <td class="text-nowrap">
-                        {{ post.rating is not null ? post.rating : '—' }}
-                    </td>
-
+                    <td class="text-nowrap">{{ post.rating is not null ? post.rating : '—' }}</td>
                     <td class="text-end text-nowrap">
-                        <a class="btn btn-sm btn-outline-secondary"
-                           href="{{ path('app_post_show', {id: post.id}) }}">Voir</a>
-                        <a class="btn btn-sm btn-primary"
-                           href="{{ path('app_post_edit', {id: post.id}) }}">Éditer</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{{ path('app_post_show', {id: post.id}) }}">Voir</a>
+                        <a class="btn btn-sm btn-primary" href="{{ path('app_post_edit', {id: post.id}) }}">Éditer</a>
                         {{ include('post/_delete_form.html.twig', { post: post }) }}
                     </td>
                 </tr>
@@ -68,6 +62,7 @@
             {% endfor %}
             </tbody>
         </table>
+
         {% if pages > 1 %}
             <nav aria-label="Pagination" class="mt-3">
                 <ul class="pagination">
@@ -98,6 +93,24 @@
                 </ul>
             </nav>
         {% endif %}
-
     </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const q = document.getElementById('tbl-search');
+            if (!q) return;
+            const rows = Array.from(document.querySelectorAll('tbody tr[data-row="post"]'));
+
+            q.addEventListener('input', () => {
+                const v = q.value.trim().toLowerCase();
+                rows.forEach(tr => {
+                    const s = tr.textContent.toLowerCase();
+                    tr.style.display = v === '' || s.includes(v) ? '' : 'none';
+                });
+            });
+        });
+    </script>
 {% endblock %}

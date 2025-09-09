@@ -1,0 +1,14 @@
+{# Usage : include avec { post: post, inList: bool } #}
+{% set inList = inList|default(false) %}
+
+<form method="post"
+      action="{{ path('watchlist_toggle', { id: post.id }) }}"
+      class="d-inline">
+    <input type="hidden" name="_token" value="{{ csrf_token('watchlist' ~ post.id) }}">
+    <button class="btn btn-sm {{ inList ? 'btn-success' : 'btn-outline-primary' }}"
+            data-watchlist
+            data-url="{{ path('watchlist_toggle', { id: post.id }) }}"
+            data-token="{{ csrf_token('watchlist' ~ post.id) }}">
+        {{ inList ? 'Dans ma liste ✓' : 'Ajouter à ma liste' }}
+    </button>
+</form>

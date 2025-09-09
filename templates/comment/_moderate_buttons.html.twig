@@ -18,3 +18,11 @@
         </button>
     </form>
 </div>
+<div class="d-inline-flex gap-2"
+     data-mod="{{ path('app_comment_toggle', {id: comment.id}) }}"
+     data-token="{{ csrf_token('toggle' ~ comment.id) }}">
+    <button class="btn btn-sm {{ comment.status == 'approved' ? 'btn-success' : 'btn-outline-success' }} js-mod-approve">
+        {{ comment.status == 'approved' ? 'approuvé' : 'Approuver' }}
+    </button>
+    <button class="btn btn-sm btn-outline-secondary js-mod-cancel">Annuler</button>
+</div>
