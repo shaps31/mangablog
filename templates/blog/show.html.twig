@@ -147,19 +147,22 @@
        Réactions
        =========================== #}
     {# Réactions #}
+    {# Réactions #}
     <div id="reactions" class="d-flex gap-2 align-items-center my-3">
         {% set emojis = {'fire':'🔥','lol':'😂','cry':'😭','wow':'🤯'} %}
         {% for kind, emoji in emojis %}
             <button
+                type="button"
                 class="btn btn-sm btn-light reaction {{ kind in rxMine ? 'active' : '' }}"
                 data-kind="{{ kind }}"
-                aria-pressed="{{ kind in rxMine ? 'true' : 'false' }}"
-                type="button">
+                data-url="{{ path('reaction_toggle', {id: post.id}) }}"
+                aria-pressed="{{ kind in rxMine ? 'true' : 'false' }}">
                 <span class="me-1">{{ emoji }}</span>
                 <span class="count">{{ rxCounts[kind]|default(0) }}</span>
             </button>
         {% endfor %}
     </div>
+
 
 
     {# ===========================
@@ -240,38 +243,50 @@
 {% block scripts %}
     {{ parent() }}
     <script>
-        (function(){
-            const url = '{{ path('reaction_toggle', {id: post.id}) }}';
+        (function () {
+            const zone = document.getElementById('reactions');
+            if (!zone) return;
             const token = '{{ csrf_token('react' ~ post.id) }}';
 
-            document.querySelectorAll('#reactions .reaction').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    // si non connecté, le fetch sera redirigé vers /login
-                    let wasActive = btn.classList.contains('active');
-                    try {
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'fetch',
-                                'X-CSRF-TOKEN': token
-                            },
-                            body: JSON.stringify({ kind: btn.dataset.kind })
-                        });
+            zone.addEventListener('click', async (e) => {
+                const btn = e.target.closest('.reaction');
+                if (!btn) return;
+                e.preventDefault();                 // au cas où
+                const url  = btn.dataset.url;       // vient du data-url
+                const kind = btn.dataset.kind;
 
-                        if (res.redirected) { window.location.href = res.url; return; }
-                        if (!res.ok) { console.warn('Reaction error'); return; }
+                try {
+                    const r = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'fetch',
+                            'X-CSRF-TOKEN': token
+                        },
+                        body: JSON.stringify({ kind })
+                    });
 
-                        // MAJ UI optimiste
-                        const cntEl = btn.querySelector('.count');
-                        let n = parseInt(cntEl.textContent || '0', 10);
-                        if (wasActive) { n = Math.max(0, n - 1); btn.classList.remove('active'); btn.setAttribute('aria-pressed','false'); }
-                        else { n = n + 1; btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); }
-                        cntEl.textContent = n;
-                    } catch(e) {
-                        console.error(e);
-                    }
-                });
+                    if (r.redirected) { window.location = r.url; return; }
+                    if (!r.ok) { console.warn('reaction failed'); return; }
+
+                    const data = await r.json();
+                    if (!data.ok) return;
+
+                    // MAJ compteurs (source = serveur)
+                    const counts = data.counts || {};
+                    zone.querySelectorAll('.reaction').forEach(b => {
+                        const k = b.dataset.kind;
+                        const c = b.querySelector('.count');
+                        c.textContent = counts[k] ?? 0;
+                    });
+
+                    // MAJ état actif du bouton cliqué
+                    const active = !!data.active;
+                    btn.classList.toggle('active', active);
+                    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+                } catch (err) {
+                    console.error(err);
+                }
             });
         })();
     </script>

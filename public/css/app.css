@@ -318,11 +318,13 @@ h1,h2,h3,.fw-bold{
 .spoiler { filter: blur(5px); cursor: pointer; transition: .2s; }
 .spoiler.revealed { filter: none; }
 #reactions .reaction { display:inline-flex; align-items:center; gap:.25rem; }
-#reactions .reaction .count { font-weight:600; opacity:.8; }
+#reactions .reaction .count { font-weight:600; opacity:.85; }
 #reactions .reaction.active {
     background: var(--bs-warning-bg-subtle, #fff3cd);
     border-color: var(--bs-warning-border-subtle, #ffe69c);
 }
+
+
 
 
 /* Responsive */
