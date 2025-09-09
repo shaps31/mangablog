@@ -1,11 +1,13 @@
 {# templates/blog/index.html.twig #}
 {% extends 'base.html.twig' %}
+
+{# Totaux de réactions (hot) — toujours défini #}
 {% set rxTotals = rxTotals|default({}) %}
 
 {% block meta %}
     {{ parent() }}
 
-    {# Valeurs sûres, si le contrôleur n’a pas fourni page/pages/q #}
+    {# Valeurs sûres même si le contrôleur ne fournit pas page/pages/q #}
     {% set curPage  = page  | default(app.request.get('page')  | default(1)) %}
     {% set maxPages = pages | default(1) %}
     {% set qval     = q     | default(app.request.get('q')     | default('')) %}
@@ -25,7 +27,7 @@
     {# Meta description contextualisée (si recherche) #}
     {% if qval %}
         <meta name="description"
-              content="Résultats pour « {{ qval }} » — page {{ curPage }} sur {{ maxPages }} sur Kamimanga.">
+              content="Résultats pour « {{ qval }} » — page {{ curPage }} sur {{ maxPages }} sur KamiManga.">
     {% endif %}
 {% endblock %}
 
@@ -40,7 +42,7 @@
         ]
     } %}
 
-    {# Variables sécurisées depuis l’URL si non passées par le contrôleur #}
+    {# Variables depuis l’URL si non passées par le contrôleur #}
     {% set q     = q|default(app.request.get('q')|default('')) %}
     {% set catId = catId|default(app.request.get('category')|default(0)) %}
     {% set tag   = tag|default(app.request.get('tag')|default(0)) %}
@@ -56,8 +58,7 @@
             <div class="col-12 col-lg">
                 <label for="q" class="form-label visually-hidden">Recherche</label>
                 <input id="q" class="form-control" type="text" name="q"
-                       placeholder="Rechercher un article…"
-                       value="{{ q }}">
+                       placeholder="Rechercher un article…" value="{{ q }}">
             </div>
 
             <div class="col-12 col-sm-6 col-lg-3">
@@ -89,6 +90,17 @@
             </div>
         </form>
 
+        <div class="d-flex gap-2 mb-2">
+            <a class="btn btn-sm {{ app.request.get('sort') != 'hot' ? 'btn-primary' : 'btn-outline-secondary' }}"
+               href="{{ path('blog_index', app.request.query.all|merge({'sort': null, 'page':1})) }}">
+                Récents
+            </a>
+            <a class="btn btn-sm {{ app.request.get('sort') == 'hot' ? 'btn-primary' : 'btn-outline-secondary' }}"
+               href="{{ path('blog_index', app.request.query.all|merge({'sort': 'hot', 'page':1})) }}">
+                Tendance 🔥
+            </a>
+        </div>
+
         {# Indicateur + reset si filtres actifs #}
         {% set hasFilters = (q|length > 0) or (catId != 0) or (tag != 0) %}
         <div class="d-flex align-items-center justify-content-between mt-2">
@@ -116,14 +128,14 @@
         <div class="d-flex gap-2 flex-wrap">
             {% for row in totalsByCat|default([]) %}
                 <span class="badge badge-cat">
-                    {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
-                </span>
+          {{ row.category ?? 'Sans catégorie' }} : {{ row.total }}
+        </span>
             {% endfor %}
 
             {% if tag %}
                 <span class="badge badge-tag ms-1">
-                    #{{ (allTags|default([])|filter(t => t.id == tag)|first).name }}
-                </span>
+          #{{ (allTags|default([])|filter(t => t.id == tag)|first).name }}
+        </span>
             {% endif %}
         </div>
     </div>
@@ -140,8 +152,8 @@
                             {{ p.title }}
                         </a>
                         <span class="badge text-bg-secondary">
-                            {{ p.comments|filter(c => c.status == 'approved')|length }}
-                        </span>
+              {{ p.comments|filter(c => c.status == 'approved')|length }}
+            </span>
                     </li>
                 {% endfor %}
             </ul>
@@ -154,41 +166,50 @@
     {# Liste des articles #}
     <div class="row row-cols-1 g-3">
         {% for post in posts %}
-        <div class="col">
-            <div class="card shadow-sm h-100 reveal" data-animate="up">
-                <div class="card-body">
+            <div class="col">
+                <article class="card shadow-sm h-100 reveal" data-animate="up">
+                    <div class="card-body">
+                        {# Titre #}
+                        <h2 class="h5 card-title mb-1">
+                            <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
+                        </h2>
 
-                    {# TITRE + compteur #}
-                    <h2 class="h5 card-title mb-1">
-                        <a href="{{ path('blog_show', { slug: post.slug }) }}">{{ post.title }}</a>
-                    </h2>
-
-
-                    {# méta : date + temps de lecture #}
-                        {% set words = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
+                        {# méta : date + temps de lecture + hot #}
+                        {% set words   = post.content|striptags|replace({'&nbsp;':' '})|split(' ')|length %}
                         {% set minutes = (words / 200)|round(0, 'ceil') %}
                         <div class="text-muted small mb-2">
-                            <span aria-label="Publié le">{{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}</span>
-                            · <span aria-label="Temps de lecture">⏱ {{ minutes }} min • 🔥 {{ rxTotals[post.id]|default(0) }}</span>
+              <span aria-label="Publié le">
+                {{ post.publishedAt ? post.publishedAt|date('Y-m-d H:i') : '—' }}
+              </span>
+                            · <span aria-label="Temps de lecture">⏱ {{ minutes }} min</span>
+                            · <span aria-label="Tendance">🔥 {{ rxTotals[post.id]|default(0) }}</span>
                         </div>
 
-                        {# cover #}
-                        {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
-                    <div class="position-relative">
-                        <img src="{{ coverUrl }}"
-                             class="img-cover mb-2"
-                             alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
-
-                        {% set hot = rxTotals[post.id]|default(0) %}
-                        {% if hot > 0 %}
-                            <span class="hot-badge"
-                                  data-bs-toggle="tooltip"
-                                  title="Réactions des 30 derniers jours">🔥 {{ hot }}</span>
+                        {# Watchlist #}
+                        {% if app.user %}
+                            <button class="btn btn-sm btn-outline-success add-to-list"
+                                    data-url="{{ path('watchlist_toggle', {id: post.id}) }}"
+                                    data-token="{{ csrf_token('watchlist' ~ post.id) }}">
+                                {{ inListIds is defined and post.id in inListIds ? 'Dans ma liste ✓' : 'Ajouter à ma liste' }}
+                            </button>
                         {% endif %}
-                    </div>
 
+                        {# Cover #}
+                        {% set coverUrl = post.cover ?: asset('img/cover-placeholder.png') %}
+                        <div class="position-relative">
+                            <img src="{{ coverUrl }}"
+                                 class="img-cover mb-2"
+                                 alt="Cover : {{ post.title }}" loading="lazy" decoding="async">
 
-                    {# Catégorie (badge-cat) cliquable #}
+                            {% set hot = rxTotals[post.id]|default(0) %}
+                            {% if hot > 0 %}
+                                <span class="hot-badge"
+                                      data-bs-toggle="tooltip"
+                                      title="Réactions des 30 derniers jours">🔥 {{ hot }}</span>
+                            {% endif %}
+                        </div>
+
+                        {# Catégorie #}
                         {% if post.category %}
                             <div class="mb-2">
                                 <a class="badge badge-cat me-1"
@@ -198,7 +219,7 @@
                             </div>
                         {% endif %}
 
-                        {# Tags (badge-tag) cliquables, surbrillance si tag actif #}
+                        {# Tags #}
                         {% if post.tags|length %}
                             <div class="mb-2">
                                 {% for t in post.tags %}
@@ -222,7 +243,9 @@
                             {{ post.content|striptags|u.truncate(220, '…') }}
                         </p>
 
-                        <a class="btn btn-read" href="{{ path('blog_show', { slug: post.slug }) }}" aria-label="Lire l’article {{ post.title }}">
+                        <a class="btn btn-read"
+                           href="{{ path('blog_show', { slug: post.slug }) }}"
+                           aria-label="Lire l’article {{ post.title }}">
                             Lire
                         </a>
                     </div>
@@ -275,10 +298,36 @@
         </nav>
     {% endif %}
 {% endblock %}
-        {% block scripts %}
-            {{ parent() }}
-            <script>
-                document.querySelectorAll('[data-bs-toggle="tooltip"]')
-                    .forEach(el => new bootstrap.Tooltip(el));
-            </script>
-        {% endblock %}
+
+{% block scripts %}
+    {{ parent() }}
+
+    <script>
+        // Tooltips (hot)
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            .forEach(el => new bootstrap.Tooltip(el));
+    </script>
+
+    <script>
+        // Toggle watchlist
+        document.addEventListener('click', async (e) => {
+            const b = e.target.closest('.add-to-list'); if (!b) return;
+            try {
+                const r = await fetch(b.dataset.url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'fetch',
+                        'X-CSRF-TOKEN': b.dataset.token
+                    },
+                    body: '{}'
+                });
+                if (!r.ok) return;
+                const j = await r.json(); // { ok:true, inList:true|false }
+                b.classList.toggle('btn-outline-success', !j.inList);
+                b.classList.toggle('btn-success', j.inList);
+                b.textContent = j.inList ? 'Dans ma liste ✓' : 'Ajouter à ma liste';
+            } catch (err) { console.error(err); }
+        });
+    </script>
+{% endblock %}

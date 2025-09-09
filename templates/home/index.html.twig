@@ -72,19 +72,16 @@
                 </div>
                 <a class="small text-decoration-none" href="{{ path('blog_index') }}#tendance">Voir plus →</a>
             </div>
-            {% if discover is defined and discover|length %}
-                <section class="mb-4 reveal" data-animate="up">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h2 class="h4 fw-bold m-0">À découvrir</h2>
-                        <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout voir →</a>
-                    </div>
+            {% if discover|length %}
+                <section class="mb-4">
+                    <h2 class="h5 fw-bold mb-2">À découvrir</h2>
                     <div class="row row-cols-1 row-cols-md-3 g-3">
                         {% for p in discover %}
                             <div class="col">
-                                <a class="card h-100 text-decoration-none hover-shadow" href="{{ path('blog_show', {slug: p.slug}) }}">
+                                <a class="card h-100 text-decoration-none" href="{{ path('blog_show', {slug: p.slug}) }}">
                                     <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy">
                                     <div class="card-body">
-                                        <div class="small text-muted mb-1">
+                                        <div class="small text-muted">
                                             {{ p.category ? p.category.name ~ ' • ' : '' }}
                                             {{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}
                                         </div>
@@ -96,6 +93,7 @@
                     </div>
                 </section>
             {% endif %}
+
 
 
             <div id="trendCarousel" class="carousel slide" data-bs-ride="false">
@@ -162,7 +160,7 @@
     {% set topTags = topTags|default([]) %}
     {% if topTags|length %}
         <section class="mb-4 reveal" data-animate="right">
-            <h2 class="h4 fw-bold mb-2">Découvrir par tags</h2>
+            <h2 class="h5 mb-3">Explorer par tags</h2>
             <div class="tag-cloud">
                 {% for row in topTags %}
                     {% set name = row.name ?? row[0] ?? '' %}
@@ -174,23 +172,22 @@
     {% endif %}
 
     {# Derniers articles (optionnel) #}
-    {% if discover|default([])|length %}
+    {% if discover|length %}
         <section class="mb-4 reveal" data-animate="up">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h2 class="h4 fw-bold m-0">À découvrir</h2>
+                <h2 class="h5 fw-bold m-0">À découvrir</h2>
                 <a class="small text-decoration-none" href="{{ path('blog_index') }}">Tout voir →</a>
             </div>
             <div class="row row-cols-1 row-cols-md-3 g-3">
                 {% for p in discover %}
                     <div class="col">
-                        <a href="{{ path('blog_show', {slug: p.slug}) }}" class="card h-100 text-decoration-none hover-shadow">
+                        <a class="card h-100 text-decoration-none" href="{{ path('blog_show', {slug: p.slug}) }}">
                             <img class="img-cover" src="{{ p.cover ?: asset('img/cover-placeholder.png') }}" alt="" loading="lazy">
                             <div class="card-body">
-                                <div class="small text-muted mb-1">
-                                    {{ p.category ? p.category.name ~ ' • ' : '' }}
-                                    {{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}
+                                <div class="small text-muted">
+                                    {{ p.category ? p.category.name ~ ' • ' : '' }}{{ p.publishedAt ? p.publishedAt|date('Y-m-d') : '—' }}
                                 </div>
-                                <div class="fw-semibold text-body">{{ p.title }}</div>
+                                <div class="fw-semibold">{{ p.title }}</div>
                             </div>
                         </a>
                     </div>
@@ -198,5 +195,6 @@
             </div>
         </section>
     {% endif %}
+
 
 {% endblock %}

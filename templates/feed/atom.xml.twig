@@ -1,0 +1,18 @@
+{# templates/feed/atom.xml.twig #}
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <title>MangaBlog — Derniers articles</title>
+    <id>{{ absolute_url(path('app_feed')) }}</id>
+    <link rel="self" href="{{ absolute_url(path('app_feed')) }}"/>
+    <updated>{{ (items|first ? (items|first).publishedAt ?? 'now' : 'now')|date('c') }}</updated>
+
+    {% for p in items %}
+        <entry>
+            <title>{{ p.title }}</title>
+            <id>{{ absolute_url(path('blog_show', {slug: p.slug})) }}</id>
+            <link href="{{ absolute_url(path('blog_show', {slug: p.slug})) }}"/>
+            <updated>{{ (p.publishedAt ?? 'now')|date('c') }}</updated>
+            <summary>{{ p.content|striptags|u.truncate(240, '…') }}</summary>
+        </entry>
+    {% endfor %}
+</feed>

@@ -6,6 +6,8 @@ use App\Entity\Post;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
+
+
 /**
  * @extends ServiceEntityRepository<Post>
  */
@@ -103,7 +105,7 @@ class PostRepository extends ServiceEntityRepository
      *   pages: int
      * }
      */
-    // src/Repository/PostRepository.php
+
     public function searchPublishedPaginated(
         ?string $q,
         ?int $categoryId,
@@ -192,4 +194,73 @@ class PostRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getResult();
     }
+    public function findPublishedHot(string $q=null, ?int $catId=null, ?int $tagId=null, int $page=1, int $perPage=12): array
+    {
+        $since = new \DateTimeImmutable('-30 days');
+
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.comments','c','WITH','c.status = :ok AND c.createdAt >= :since')
+            ->leftJoin('p.tags','t')
+            ->leftJoin('App\Entity\Reaction','r','WITH','r.post = p AND r.createdAt >= :since')
+            ->addSelect('(COUNT(DISTINCT r.id) + COUNT(DISTINCT c.id)) AS HIDDEN score')
+            ->andWhere('p.status = :pub')
+            ->setParameter('pub','published')
+            ->setParameter('ok','approved')
+            ->setParameter('since',$since);
+
+        if ($q)     { $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')->setParameter('q','%'.$q.'%'); }
+        if ($catId) { $qb->andWhere('p.category = :cat')->setParameter('cat',$catId); }
+        if ($tagId) { $qb->andWhere('t.id = :tag')->setParameter('tag',$tagId); }
+
+        $qb->groupBy('p.id')
+            ->orderBy('score','DESC')
+            ->addOrderBy('p.publishedAt','DESC');
+
+        // total
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')
+            ->resetDQLPart('orderBy')
+            ->getQuery()->getSingleScalarResult();
+
+        $items = $qb->setFirstResult(($page-1)*$perPage)
+            ->setMaxResults($perPage)
+            ->getQuery()->getResult();
+
+        return ['items'=>$items,'total'=>$total,'page'=>$page,'pages'=>max(1,(int)ceil($total/$perPage))];
+    }
+
+    public function relatedByTags(Post $post, int $limit = 4): array
+    {
+        // Récupère les id des tags de l’article courant
+        $tagIds = array_map(fn($t) => $t->getId(), $post->getTags()->toArray());
+
+        // Pas de tag ? on propose juste les plus récents (autres posts)
+        if (!$tagIds) {
+            return $this->createQueryBuilder('p')
+                ->where('p != :post')
+                ->setParameter('post', $post)
+                ->orderBy('p.publishedAt', 'DESC')
+                ->setMaxResults($limit)
+                ->getQuery()->getResult();
+        }
+
+        return $this->createQueryBuilder('p')
+            ->innerJoin('p.tags', 't')
+            ->andWhere('p != :post')
+            ->andWhere('t.id IN (:tagIds)')
+            ->setParameter('post', $post)
+            ->setParameter('tagIds', $tagIds)
+            ->groupBy('p.id')
+            // d’abord ceux qui partagent le plus de tags, puis les plus récents
+            ->orderBy('COUNT(t.id)', 'DESC')
+            ->addOrderBy('p.publishedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()->getResult();
+    }
+    #[Route('/rss.xml', name: 'rss')]
+    public function rss(PostRepository $repo): Response {
+        $posts = $repo->findBy([], ['publishedAt'=>'DESC'], 20);
+        return $this->render('feed/rss.xml.twig', ['posts'=>$posts]);
+    }
+
 }

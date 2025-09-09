@@ -1,264 +1,226 @@
 <?php
 
-namespace App\Controller;
+namespace App\Repository;
 
 use App\Entity\Post;
-use App\Form\PostType;
-use App\Repository\PostRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\String\Slugger\SluggerInterface;
-use Symfony\Component\HttpFoundation\StreamedResponse;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
-use App\Repository\ReactionRepository;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
 
-#[Route('/post')]
-#[IsGranted('ROLE_ADMIN')]
-final class PostController extends AbstractController
+/**
+ * @extends ServiceEntityRepository<Post>
+ */
+class PostController extends ServiceEntityRepository
 {
-    #[Route('/post', name: 'app_post_index', methods: ['GET'])]
-    public function index(
-        Request $request,
-        PostRepository $postRepository,
-        ReactionRepository $reactionRepo
-    ): Response {
-        $page    = max(1, (int) $request->query->get('page', 1));
-        $perPage = max(5, min(50, (int) $request->query->get('size', 15)));
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Post::class);
+    }
 
-        $qb = $postRepository->createQueryBuilder('p')
-            ->orderBy('p.publishedAt', 'DESC')
-            ->addOrderBy('p.id', 'DESC');
+    /**
+     * Recherche des articles publiés avec filtres optionnels (liste complète, non paginée).
+     *
+     * @return Post[]
+     */
+    public function searchPublished(string $q = '', int $categoryId = 0, int $tagId = 0): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->leftJoin('p.tags', 't')->addSelect('t')
+            ->andWhere('p.status = :pub')->setParameter('pub', 'published')
+            ->orderBy('p.publishedAt', 'DESC');
 
-        $total = (int) (clone $qb)->select('COUNT(p.id)')->getQuery()->getSingleScalarResult();
+        if ($q !== '') {
+            $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')
+                ->setParameter('q', '%'.$q.'%');
+        }
 
-        $posts = $qb
-            ->setFirstResult(($page - 1) * $perPage)
+        if ($categoryId > 0) {
+            $qb->andWhere('c.id = :cid')->setParameter('cid', $categoryId);
+        }
+
+        if ($tagId > 0) {
+            $qb->andWhere('t.id = :tid')->setParameter('tid', $tagId);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countPublishedBetween(\DateTimeInterface $from, \DateTimeInterface $to): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.status = :status')
+            ->andWhere('p.publishedAt BETWEEN :from AND :to')
+            ->setParameter('status', 'published')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * @return array<int, array{category: string, total: string}>
+     */
+    public function countByCategoryBetween(\DateTimeInterface $from, \DateTimeInterface $to): array
+    {
+        return $this->createQueryBuilder('p')
+            ->select('c.name AS category, COUNT(p.id) AS total')
+            ->leftJoin('p.category', 'c')
+            ->where('p.status = :status')
+            ->andWhere('p.publishedAt BETWEEN :from AND :to')
+            ->setParameter('status', 'published')
+            ->setParameter('from', $from)
+            ->setParameter('to', $to)
+            ->groupBy('c.id')
+            ->orderBy('total', 'DESC')
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    /**
+     * Recherche **paginée** des articles publiés avec filtres.
+     *
+     * @return array{
+     *   items: array,
+     *   total: int,
+     *   page: int,
+     *   perPage: int,
+     *   pages: int
+     * }
+     */
+    public function searchPublishedPaginated(
+        ?string $q,
+        ?int $categoryId,
+        ?int $tagId,
+        int $page,
+        int $perPage = 5
+    ): array {
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere('p.status = :published')
+            ->setParameter('published', 'published');
+
+        if ($q) {
+            $qb->andWhere('(LOWER(p.title) LIKE :q OR LOWER(p.content) LIKE :q)')
+                ->setParameter('q', '%'.mb_strtolower($q).'%');
+        }
+
+        if ($categoryId) {
+            $qb->andWhere('p.category = :cid')->setParameter('cid', $categoryId);
+        }
+
+        if ($tagId) {
+            // JOIN uniquement pour filtrer
+            $qb->join('p.tags', 't')->andWhere('t.id = :tid')->setParameter('tid', $tagId);
+        }
+
+        $qb->orderBy('p.publishedAt', 'DESC')
+            ->addOrderBy('p.id', 'DESC')
+            ->distinct();
+
+        // Total AVANT pagination
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')->getQuery()->getSingleScalarResult();
+
+        // Résultats paginés
+        $offset = max(0, ($page - 1) * $perPage);
+        $items = $qb->setFirstResult($offset)
             ->setMaxResults($perPage)
             ->getQuery()
             ->getResult();
 
-        $pages = max(1, (int) ceil($total / $perPage));
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => (int) ceil($total / $perPage),
+        ];
+    }
 
-        // --- Réactions par post (clé = postId) -------------------------------
-        $ids = [];
-        foreach ($posts as $p) {
-            // éviter les dupes au cas où
-            $id = method_exists($p, 'getId') ? $p->getId() : null;
-            if ($id !== null) { $ids[$id] = $id; }
+    /**
+     * @return Post[]
+     */
+    public function findPublishedForExport(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.category', 'c')->addSelect('c')
+            ->leftJoin('p.author', 'a')->addSelect('a')
+            ->where('p.status = :st')->setParameter('st', 'published')
+            ->orderBy('p.publishedAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findRelated(Post $post, int $limit = 3): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->andWhere('p.status = :s')->setParameter('s', 'published')
+            ->andWhere('p != :post')->setParameter('post', $post)
+            ->setMaxResults($limit);
+
+        if ($post->getTags()->count() > 0) {
+            $qb->leftJoin('p.tags', 't')
+                ->andWhere('p.category = :cat OR t IN (:tags)')
+                ->setParameter('cat', $post->getCategory())
+                ->setParameter('tags', $post->getTags())
+                ->groupBy('p.id')
+                ->addOrderBy('COUNT(t)', 'DESC')
+                ->addOrderBy('p.publishedAt', 'DESC');
+        } else {
+            $qb->andWhere('p.category = :cat')->setParameter('cat', $post->getCategory())
+                ->orderBy('p.publishedAt', 'DESC');
         }
 
-        $rxTotals = [];
-        if (!empty($ids)) {
-            // Attendu: tableau associatif [postId => ['total' => int, ...]]
-            $rxTotals = $reactionRepo->totalsForPostIds(array_values($ids));
-        }
-        // --------------------------------------------------------------------
-
-        return $this->render('post/index.html.twig', [
-            'posts'     => $posts,
-            'page'      => $page,
-            'pages'     => $pages,
-            'total'     => $total,
-            'perPage'   => $perPage,
-            'rxTotals'  => $rxTotals, // <-- dispo dans Twig
-        ]);
+        return $qb->getQuery()->getResult();
     }
 
+    /**
+     * Tri “Tendance” (30 jours) : réactions + commentaires approuvés
+     *
+     * @return array{items: array, total: int, page: int, pages: int}
+     */
+    public function findPublishedHot(
+        string $q = null,
+        ?int $catId = null,
+        ?int $tagId = null,
+        int $page = 1,
+        int $perPage = 12
+    ): array {
+        $since = new \DateTimeImmutable('-30 days');
 
-    #[Route('/new', name: 'app_post_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em): Response
-    {
-        $post = new Post();                                // on crée un nouvel objet
-        $form = $this->createForm(PostType::class, $post); // on construit le formulaire
-        $form->handleRequest($request);                    // on lie la requête
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin('p.comments','c','WITH','c.status = :ok AND c.createdAt >= :since')
+            ->leftJoin('p.tags','t')
+            // join indépendant sur Reaction via condition
+            ->leftJoin('App\Entity\Reaction','r','WITH','r.post = p AND r.createdAt >= :since')
+            ->addSelect('(COUNT(DISTINCT r.id) + COUNT(DISTINCT c.id)) AS HIDDEN score')
+            ->andWhere('p.status = :pub')
+            ->setParameter('pub','published')
+            ->setParameter('ok','approved')
+            ->setParameter('since',$since);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            /** @var UploadedFile|null $uploaded */
-            $uploaded = $form->get('coverFile')->getData();
-            if ($uploaded) {
-                $filename = $this->handleCoverUpload(
-                    $uploaded,
-                    $this->getParameter('uploads_covers_dir') // config/services.yaml
-                );
-                if ($filename) {
-                    // Chemin public
-                    $post->setCover('/uploads/covers/'.$filename);
-                }
-            }
-            // Associer l'auteur connecté
-            $post->setAuthor($this->getUser());
+        if ($q)     { $qb->andWhere('p.title LIKE :q OR p.content LIKE :q')->setParameter('q','%'.$q.'%'); }
+        if ($catId) { $qb->andWhere('p.category = :cat')->setParameter('cat',$catId); }
+        if ($tagId) { $qb->andWhere('t.id = :tag')->setParameter('tag',$tagId); }
 
-            // Générer un slug si le champ est vide
-            if (!$post->getSlug()) {
-                $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle()), '-'));
-                $post->setSlug($slug);
-            }
+        $qb->groupBy('p.id')
+            ->orderBy('score','DESC')
+            ->addOrderBy('p.publishedAt','DESC');
 
-            // Si publié sans date -> maintenant (optionnel)
-            if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
-                $post->setPublishedAt(new \DateTimeImmutable());
-            }
+        // total
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(DISTINCT p.id)')
+            ->resetDQLPart('orderBy')
+            ->getQuery()->getSingleScalarResult();
 
+        $items = $qb->setFirstResult(($page-1)*$perPage)
+            ->setMaxResults($perPage)
+            ->getQuery()->getResult();
 
-            $em->persist($post);
-            $em->flush();
-            $this->addFlash('success', 'Article créé.');
-            return $this->redirectToRoute('app_post_index'); // retour à la liste
-        }
-
-        return $this->render('post/new.html.twig', [
-            'post' => $post,
-            'form' => $form->createView(),
-        ]);
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page'  => $page,
+            'pages' => max(1,(int)ceil($total/$perPage)),
+        ];
     }
-
-
-    #[Route('/{id}', name: 'app_post_show', requirements: ['id' => '\d+'], methods: ['GET'])]
-    public function show(Post $post): Response
-    {
-        return $this->render('post/show.html.twig', [
-            'post' => $post,
-        ]);
-    }
-
-    #[Route('/{id}/edit', name: 'app_post_edit', requirements: ['id' => '\d+'], methods: ['GET', 'POST'])]
-    public function edit(Request $request, Post $post, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
-    {
-        $form = $this->createForm(PostType::class, $post);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            /** @var UploadedFile|null $uploaded */
-            $uploaded = $form->get('coverFile')->getData();
-            if ($uploaded) {
-                $filename = $this->handleCoverUpload(
-                    $uploaded,
-                    $this->getParameter('uploads_covers_dir') // config/services.yaml
-                );
-                if ($filename) {
-                    // Chemin public
-                    $post->setCover('/uploads/covers/'.$filename);
-                }
-            }
-            // Associer l'auteur connecté
-            $post->setAuthor($this->getUser());
-            if ($post->getAuthor() !== $this->getUser() && ! $this->isGranted('ROLE_ADMIN')) {
-                throw $this->createAccessDeniedException('Tu ne peux modifier que tes propres articles.');
-            }
-
-
-            // Générer le slug si vide
-            if (!$post->getSlug()) {
-                $post->setSlug(strtolower($slugger->slug($post->getTitle())));
-            }
-            // Si le slug est vide (non défini par l’utilisateur)
-            if (!$post->getSlug()) {
-                // On génère un slug à partir du titre :
-                // 1. preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle())
-                //    → on remplace tout ce qui n’est pas lettre ou chiffre par un tiret "-"
-                // 2. trim(..., '-')
-                //    → on enlève les tirets au début/fin s’il y en a
-                // 3. strtolower(...)
-                //    → on met tout en minuscules
-                $slug = strtolower(
-                    trim(
-                        preg_replace('/[^a-z0-9]+/i', '-', $post->getTitle()),
-                        '-'
-                    )
-                );
-
-                // On affecte ce slug automatiquement à l’article
-                $post->setSlug($slug);
-            }
-
-
-            // Si on publie sans date -> maintenant
-            if ($post->getStatus() === 'published' && null === $post->getPublishedAt()) {
-                $post->setPublishedAt(new \DateTimeImmutable());
-            }
-
-            $entityManager->flush();
-            return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
-        }
-
-        return $this->render('post/edit.html.twig', [
-            'post' => $post,
-            'form' => $form->createView(),
-        ]);
-    }
-
-    #[Route('/{id}', name: 'app_post_delete', requirements: ['id' => '\d+'], methods: ['POST'])]
-    public function delete(Request $request, Post $post, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('delete'.$post->getId(), $request->getPayload()->getString('_token'))) {
-            if ($post->getAuthor() !== $this->getUser() && ! $this->isGranted('ROLE_ADMIN')) {
-                throw $this->createAccessDeniedException('Tu ne peux modifier que tes propres articles.');
-            }
-
-            $entityManager->remove($post);
-            $entityManager->flush();
-        }
-
-        return $this->redirectToRoute('app_post_index', [], Response::HTTP_SEE_OTHER);
-    }
-
-    #[Route('/post/export', name: 'app_post_export', methods: ['GET'])]
-    public function exportCsv(PostRepository $repo): StreamedResponse
-    {
-        // 📄 Nom du fichier exporté (ex: posts-20250906-153000.csv)
-        $filename = 'posts-'.(new \DateTimeImmutable())->format('Ymd-His').'.csv';
-
-        // ⏳ StreamedResponse = la réponse est envoyée petit à petit (flux),
-        // idéal pour générer un gros fichier CSV
-        $response = new StreamedResponse(function () use ($repo) {
-            // Ouverture du flux de sortie (php://output = directement la réponse HTTP)
-            $handle = fopen('php://output', 'w');
-
-            // (Optionnel) écrire le BOM UTF-8 pour qu’Excel gère bien les accents
-            // fwrite($handle, "\xEF\xBB\xBF");
-
-            // ✍️ Ligne d'en-tête du CSV (colonnes)
-            fputcsv($handle, ['id', 'title', 'slug', 'category', 'publishedAt', 'rating', 'author'], ';');
-
-            // 📊 On parcourt les articles publiés
-            foreach ($repo->findPublishedForExport() as $p) {
-                fputcsv($handle, [
-                    $p->getId(),                                  // id du post
-                    $p->getTitle(),                               // titre
-                    $p->getSlug(),                                // slug
-                    $p->getCategory()?->getName(),                // nom de la catégorie (si elle existe)
-                    $p->getPublishedAt()?->format('Y-m-d H:i'),   // date de publication
-                    $p->getRating(),                              // note
-                    $p->getAuthor()?->getUserIdentifier(),        // auteur (email ou username)
-                ], ';'); // séparateur = point-virgule
-            }
-
-            // Fermeture du flux
-            fclose($handle);
-        });
-
-        // 🔧 Configuration des en-têtes HTTP pour forcer le téléchargement
-        $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="'.$filename.'"');
-
-        return $response;
-    }
-
-    private function handleCoverUpload(?UploadedFile $file, string $targetDir): ?string
-    {
-        if (!$file) return null;
-
-        $original = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $safeName = $this->slugger->slug($original)->lower();
-        $ext = $file->guessExtension() ?: 'bin';
-        $filename = sprintf('%s-%s.%s', $safeName, uniqid('', true), $ext);
-
-        $file->move($targetDir, $filename);
-        return $filename; // on renverra ensuite "/uploads/covers/$filename"
-    }
-
 }
