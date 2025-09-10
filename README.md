@@ -4,8 +4,9 @@
   <img src="docs/badges/made-with-love.svg" alt="Made with love by Shabadine">
 </p>
 <p align="center">
-  <img src="templates/_partials/logo_icon.svg.twig" alt="Logo">
+  <img src="docs/badges/kamimanga-logo.svg" alt="KamiManga logo" width="180">
 </p>
+
 
 <p align="center">
   Blog manga sous Symfony — recherche & filtres, réactions 🔥, watchlist, profil auteur, back-office, SEO propre.
@@ -184,4 +185,7 @@ MIT © Shabadine
 
 <p align="center">
   <img src="docs/badges/made-with-love.svg" alt="Made with love by Shabadine">
+</p>
+<p align="center">
+  <img src="docs/badges/kamimanga-logo.svg" alt="KamiManga logo" width="180">
 </p>
